@@ -1,0 +1,766 @@
+{% extends 'head/home.html' %}
+{% load static %}
+
+{% block content %}
+{% include 'includ/navbar.html' %}
+
+<style>
+  .profil-img {
+    width: 100%;
+    height: 250px;
+    object-fit: fill;
+    border-radius: 29px;
+  }
+
+  .card {
+    margin: auto;
+    border-radius: 30px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .card-body {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .biographie {
+    flex-grow: 1;
+    overflow: hidden;
+  }
+
+  .blink {
+    background-color: #28a745;
+    border-radius: 50%;
+    width: 10px;
+    height: 10px;
+    display: inline-block;
+    animation: blink-animation 1s infinite;
+  }
+
+  @keyframes blink-animation {
+    0% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.3;
+    }
+
+    100% {
+      opacity: 1;
+    }
+  }
+
+  .custom-shadow-btn {
+  position: relative;
+  background-color: black;
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+  border-radius: 12px;
+  border: none;
+  width: 130px;
+  padding: 8px 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  overflow: hidden;
+}
+
+.custom-shadow-btn:hover {
+  box-shadow: 0 6px 20px rgba(4, 8, 255, 0.8);
+  transform: translateY(-4px);
+  color: var(--main-color);
+  background-color: white;
+}
+
+/* Animation pulsante circulaire */
+.pulse-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 120%;
+  height: 120%;
+  background-color: rgba(0, 128, 255, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse 2s infinite;
+  z-index: 0;
+}
+
+.pulsating-btn {
+  z-index: 1;
+}
+
+/* Entrée douce en fondu glissant */
+.animated-fade-in {
+  animation: fadeInUp 1s ease forwards;
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.95);
+    opacity: 0.5;
+  }
+  70% {
+    transform: translate(-50%, -50%) scale(1.4);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+}
+
+  .pulse {
+    animation: pulseBadge 1.2s infinite;
+  }
+
+  @keyframes pulseBadge {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.4);
+      opacity: 0.6;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  .story-circle {
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #007bff;
+    transition: transform 0.3s ease;
+  }
+
+  .story-circle:hover {
+    transform: scale(1.1);
+  }
+  .modal-content {
+    border-radius: 12px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+  }
+
+  .modal-body input[type="file"] {
+    cursor: pointer;
+  }
+
+  #contenuModaleStory {
+    padding: 0 !important;
+  }
+  #storyModal .modal-content,
+#storyLikesModal .modal-content {
+  transition: all 0.3s ease-in-out;
+}
+
+#storyContent img,
+#storyContent video {
+  max-height: 400px;
+  object-fit: contain;
+  border-radius: 12px;
+  background-color: #000;
+}
+
+#storyLikesContent img {
+  border: 2px solid #ccc;
+}
+.assistant-wrapper {
+    position: fixed;
+    top: 85px;
+    right: 1px;
+    z-index: 1050;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .btn-assistant-ai {
+    width: 55px;
+    height: 55px;
+    background: linear-gradient(45deg, #0d6efd, #00c6ff);
+    color: white;
+    font-size: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    position: relative;
+    transition: transform 0.3s ease;
+  }
+
+  .btn-assistant-ai:hover {
+    transform: scale(1.1);
+    background: linear-gradient(45deg, #007bff, #00b3e6);
+  }
+
+  .bubble-help {
+    margin-top: 8px;
+    padding: 1px 1px;
+    background: #fff;
+    color: #0d6efd;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 20px;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+  }
+
+  .assistant-wrapper:hover .bubble-help {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Point rouge de notification */
+  .notif-dot {
+    position: absolute;
+    top: 5px;
+    right: 1px;
+    width: 10px;
+    height: 10px;
+    background: red;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px white;
+  }
+
+  /* Animation pulsante */
+  .pulse-ring {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: rgb(250, 0, 0);
+    animation: pulse 1.5s infinite ease-in-out;
+    z-index: -1;
+  }
+
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+      opacity: 0.8;
+    }
+    70% {
+      transform: scale(1.7);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 0;
+    }
+  }
+</style>
+
+<!-- Carousel -->
+<div id="messageSlider" class="carousel slide mt-4" data-bs-ride="carousel">
+  <div class="carousel-inner">
+    <div class="carousel-item active">
+      <img src="{% static 'images/Ima_3.jpg' %}" class="d-block" alt="Slider message"
+        style="height: 300px; width: 100%; object-fit: fill; object-position: top;">
+      <div class="carousel-caption">
+        <h5 style="font-weight: bold; font-size: 30px;">Naviguer sans limite !!!</h5>
+        <p class="fw-bold">Connectez-vous pour gérer votre compte utilisateur et découvrir les profils des autres.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if utilisateur_connecte %}
+<!-- Bouton flottant IA avec animation -->
+<div class="assistant-wrapper">
+  <a href="{% url 'chatbot_view' %}" title="Parlez à CgmIA" class="btn-assistant-ai" id="btnAssistantAI">
+    <i class="bi bi-robot"></i>
+    <span class="pulse-ring"></span>
+    <span class="notif-dot"></span>
+  </a>
+  <div class="bubble-help">Besoin d’aide ?</div>
+</div>
+{% endif %}
+
+
+
+
+
+<!-- Zone des stories utilisateurs -->
+  <div class="container mt-2">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h5 class="fw-bold mb-0 text-primary fs-3"><i class="bi bi-camera-reels-fill me-2"></i>Stories</h5>
+      {% if utilisateur_connecte %}
+      <!-- Bouton Ajouter Story -->
+      <a href="#" onclick="document.getElementById('inputStoryDirect').click()" class="position-relative d-inline-block">
+        <div class="rounded-circle bg-gradient shadow d-flex align-items-center justify-content-center" title="Ajout un story"
+          style="width: 65px; height: 65px; background: linear-gradient(45deg, #000000, #fad106); border: 1px solid var(--bs-primary); z-index: 1;">
+          <i class="bi bi-plus fs-2 fw-bold text-primary"></i>
+        </div>
+      </a>
+
+      <!-- INPUT FICHIER CACHÉ -->
+      <input type="file" id="inputStoryDirect" accept="image/*,video/*" style="display: none;"
+        onchange="envoyerStoryDirect(this)">
+
+      {% endif %}
+    </div>
+
+    <div class="d-flex overflow-auto" style="gap: 12px; padding: 8px 5px;">
+      {% for story in stories %}
+      <a href="javascript:void(0);" onclick="openStoryModal({{ story.auteur.id }})" class="text-decoration-none"
+        title="{{ story.auteur.nom }}">
+        <div class="position-relative">
+          {% if story.auteur.image_profil %}
+          <img src="{{ story.auteur.image_profil.url }}" alt="Story"
+            class="rounded-circle border border-3 border-primary shadow"
+            style="width: 65px; height: 65px; object-fit: fill;">
+          {% else %}
+          <img src="{% static 'images/image_4.png' %}" alt="Story"
+            class="rounded-circle border border-3 border-primary shadow"
+            style="width: 65px; height: 65px; object-fit: fill;">
+          {% endif %}
+        </div>
+      </a>
+      {% endfor %}
+      {% if not stories %}
+      <p class="text-muted">Aucune story disponible pour l’instant.</p>
+      {% endif %}
+    </div>
+  </div>
+
+
+
+<!-- Titre -->
+<div class="container mt-2">
+  <div class="row">
+    <div class="col-12">
+      <h4 class="mb-3 fw-bold">👤 View the accounts users | Online</h4>
+      <hr style="border-color: rgb(121, 119, 119);">
+    </div>
+  </div>
+</div>
+
+<!-- Cartes utilisateurs -->
+{% now "U" as now %}
+<div class="container">
+  <div class="row">
+    {% if utilisateurs %}
+    {% for user in utilisateurs %}
+    <div class="col-md-4 mb-4 col-lg-3 d-flex">
+      <div class="card shadow w-100 h-100">
+        {% if user.image_profil %}
+        <img src="{{ user.image_profil.url }}" class="card-img-top profil-img img-fluid" alt="{{ user.nom }}">
+        {% else %}
+        <img src="{% static 'images/image_4.png' %}" class="card-img-top profil-img img-fluid" alt="Default">
+        {% endif %}
+
+        <div class="card-body d-flex flex-column">
+          <h6 class="fw-bold">{{ user.nom }} {{ user.prenom }}</h6>
+          <p class="card-text text-muted mb-1 biographie" style="font-size: 13px;">
+            {{ user.biographie|default:"Aucune biographie disponible."|truncatechars:100 }}
+          </p>
+
+          {% if user.derniere_connexion %}
+          {% if user.derniere_connexion|date:"U"|add:"0"|floatformat:"0" <= now|add:"-300"|floatformat:"0" %} <small
+            class="text-muted d-block">
+            <i class="fa fa-clock-o me-1"></i>Deconnected : {{ user.derniere_connexion|date:"d/m/Y H:i" }}
+            </small>
+            {% endif %}
+            {% endif %}
+
+            <div class="d-flex justify-content-between align-items-center mt-auto pt-3">
+              <div class="d-flex align-items-center">
+                {% if user.derniere_connexion %}
+                {% if user.is_online %}
+                <span class="blink me-1"></span>
+                <small class="text-success fw-bold">En ligne</small>
+                {% else %}
+                <small class="text-muted">Hors ligne</small>
+                {% endif %}
+                {% endif %}
+              </div>
+              <a href="{% url 'voir_profil' user.id %}" class="btn custom-shadow-btn pulsating-btn animated-fade-in">
+                Voir plus... <i class="fa fa-eye ms-1" aria-hidden="true"></i>
+                <span class="pulse-ring"></span>
+              </a>
+            </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="col-12 text-center text-danger fw-bold mt-3">
+      Aucun utilisateur trouvé pour « {{ search_query }} »
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- MODAL PRINCIPAL POUR AFFICHER UNE STORY -->
+<div class="modal fade" id="storyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content bg-black text-white rounded-4 shadow-lg border-0" style="overflow: hidden;">
+      
+      <!-- Header avec avatar + nom -->
+      <div class="modal-header border-0 px-4 pt-3 pb-2">
+        <h6 class="modal-title fw-semibold fs-6 d-flex align-items-center gap-2" id="storyAuthorName">
+          <!-- Injecté dynamiquement -->
+        </h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+
+      <!-- Barre de progression dynamique -->
+      <div id="storyProgressBar" class="progress rounded-0" style="height: 2px;">
+        <!-- La couleur sera modifiée par JS : bg-primary ou bg-white -->
+        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+      </div>
+
+      <!-- Zone du contenu -->
+      <div id="storyContainer" class="position-relative bg-black text-center" style="min-height: 320px;">
+        <div id="storyContent" class="p-3"></div>
+
+        <!-- Navigation gauche/droite -->
+        <button onclick="previousStory()" class="btn btn-light rounded-circle shadow-sm position-absolute top-50 start-0 translate-middle-y ms-2" style="width: 36px; height: 36px;">
+          <i class="fas fa-chevron-left small"></i>
+        </button>
+        <button onclick="nextStory()" class="btn btn-light rounded-circle shadow-sm position-absolute top-50 end-0 translate-middle-y me-2" style="width: 36px; height: 36px;">
+          <i class="fas fa-chevron-right small"></i>
+        </button>
+
+        <!-- Contrôles bas : pause et likes -->
+        <div class="position-absolute bottom-0 start-0 m-3">
+          <button onclick="togglePause()" class="btn btn-outline-light btn-sm rounded-pill px-3">
+            <i id="pauseIcon" class="fas fa-pause"></i>
+          </button>
+        </div>
+
+        <div class="position-absolute bottom-0 end-0 m-3 d-flex align-items-center gap-2" id="likeStorySection">
+          <!-- Injecté via JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- MODALE POUR VOIR LES UTILISATEURS QUI ONT AIMÉ -->
+<div class="modal fade" id="storyLikesModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content rounded-4 shadow-sm border-0">
+      <div class="modal-header bg-light border-bottom-0 rounded-top-4">
+        <h6 class="modal-title mb-0">Personnes ayant aimé</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+      <div class="modal-body p-3" id="storyLikesContent">
+        <div class="text-center text-muted">Chargement...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+<br>
+
+<script>
+    let isNavigating = false;
+
+    // Quand l'utilisateur clique sur un lien interne → navigation normale
+    document.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+            isNavigating = true;
+        });
+    });
+
+    // Idem pour les formulaires (comme logout manuel ou formulaire blog)
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', () => {
+            isNavigating = true;
+        });
+    });
+
+    // Maintenant on intercepte uniquement si l'utilisateur ferme ou actualise (beforeunload) sendBeacon
+    window.addEventListener("beforeunload", function () {
+        if (!isNavigating) {
+            if (navigator.sendBeacon) {
+                const data = new FormData();
+                navigator.beforeunload("{% url 'logout_ajax' %}", data);
+            } else {
+                fetch("{% url 'logout_ajax' %}", {
+                    method: "POST",
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': '{{ csrf_token }}',
+                    },
+                });
+            }
+        }
+    });
+</script>
+
+
+<script>
+let storyTimeout = null;
+let storyIndex = 0;
+let storyList = [];
+let paused = false;
+let progress = 0;
+let interval = null;
+let estProprietaireStory = false;
+let storiesVues = new Set(); // Pour marquer les stories vues
+
+function openStoryModal(userId) {
+  fetch(`/ajax/stories/${userId}/`)
+    .then(response => response.json())
+    .then(data => {
+      storyList = data.stories;
+      storyIndex = 0;
+      estProprietaireStory = data.est_proprietaire;
+
+      document.getElementById("storyAuthorName").innerHTML = `
+        <img src="${data.image_profil}" class="rounded-circle me-2" style="width: 30px; height: 30px;">
+        ${data.nom}`;
+
+      const modalEl = document.getElementById("storyModal");
+      const modalInstance = new bootstrap.Modal(modalEl);
+      modalInstance.show();
+
+      showStory();
+
+      modalEl.addEventListener("hide.bs.modal", () => {
+        clearTimeout(storyTimeout);
+        clearInterval(interval);
+        stopVideo();
+        document.getElementById("storyContent").innerHTML = "";
+      });
+    });
+}
+
+function showStory() {
+  if (storyIndex >= storyList.length) {
+    bootstrap.Modal.getInstance(document.getElementById("storyModal")).hide();
+    return;
+  }
+
+  const story = storyList[storyIndex];
+  const contentContainer = document.getElementById("storyContent");
+  const progressBar = document.querySelector("#storyProgressBar .progress-bar");
+
+  let content = "";
+
+  if (story.type === "image") {
+    content = `<img src="${story.media_url}" class="w-100" style="max-height:500px; object-fit:contain;">`;
+  } else if (story.type === "video") {
+    content = `<video id="storyVideo" class="w-100" style="max-height:500px;" autoplay controls>
+                 <source src="${story.media_url}" type="video/mp4">
+               </video>`;
+  }
+
+  contentContainer.innerHTML = `
+    ${content}
+    <p class="mt-2 mb-0">${story.description || ''}</p>
+    <small class="text-muted">${story.date}</small>
+  `;
+
+  // Ajouter l’ID à la liste des vues
+  storiesVues.add(story.id);
+
+  // Couleur de la barre selon vue
+  progressBar.className = `progress-bar ${storiesVues.has(story.id) ? 'bg-primary' : 'bg-white'}`;
+  progressBar.style.width = "0%";
+
+  // Zone de like
+  const likeSection = document.getElementById("likeStorySection");
+  if (estProprietaireStory) {
+    likeSection.innerHTML = `
+      <i class="fas fa-heart text-danger me-1"></i>
+      <span onclick="afficherLikesStory()" style="cursor:pointer">${story.likes || 0}</span>
+    `;
+  } else {
+    likeSection.innerHTML = `
+      <i class="${story.is_liked ? 'fas' : 'far'} fa-heart"
+         style="cursor:pointer; color:${story.is_liked ? 'red' : 'white'}"
+         onclick="toggleLikeStory()"></i>
+    `;
+  }
+
+  // Progression
+  progress = 0;
+  clearInterval(interval);
+
+  const duration = story.type === "image" ? 5000 : 15000;
+  const step = 100 / (duration / 100);
+
+  interval = setInterval(() => {
+    if (!paused) {
+      progress += step;
+      progressBar.style.width = `${progress}%`;
+      if (progress >= 100) {
+        clearInterval(interval);
+        storyIndex++;
+        showStory();
+      }
+    }
+  }, 100);
+}
+
+function togglePause() {
+  paused = !paused;
+  const icon = document.getElementById("pauseIcon");
+  icon.className = paused ? "fas fa-play" : "fas fa-pause";
+}
+
+function nextStory() {
+  clearInterval(interval);
+  storyIndex++;
+  showStory();
+}
+
+function previousStory() {
+  clearInterval(interval);
+  storyIndex = Math.max(0, storyIndex - 1);
+  showStory();
+}
+
+function stopVideo() {
+  const video = document.getElementById("storyVideo");
+  if (video) {
+    video.pause();
+    video.removeAttribute("src");
+    video.load();
+  }
+}
+
+// ❤️ Liker une story
+function toggleLikeStory() {
+  const story = storyList[storyIndex];
+  fetch(`/ajax/story/${story.id}/like/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': getCSRFToken(),
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({})
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        story.is_liked = data.is_liked;
+        story.likes = data.total_likes;
+        showStory();
+      }
+    });
+}
+
+// 👥 Afficher les utilisateurs ayant aimé
+function afficherLikesStory() {
+  paused = true; // Met en pause
+  document.getElementById("pauseIcon").className = "fas fa-play";
+
+  const story = storyList[storyIndex];
+  fetch(`/ajax/story/${story.id}/likes/`)
+    .then(res => res.json())
+    .then(data => {
+      const container = document.getElementById("storyLikesContent");
+      if (data.users.length === 0) {
+        container.innerHTML = '<p class="text-muted">Aucun utilisateur pour l’instant</p>';
+      } else {
+        container.innerHTML = data.users.map(u => `
+          <div class="d-flex align-items-center mb-2">
+            <img src="${u.image}" class="rounded-circle me-2" style="width: 35px; height: 35px;">
+            <span>${u.nom}</span>
+          </div>`).join('');
+      }
+      new bootstrap.Modal(document.getElementById("storyLikesModal")).show();
+    });
+}
+
+// 🔒 Token CSRF
+function getCSRFToken() {
+  const name = 'csrftoken';
+  const cookies = document.cookie.split(';');
+  for (let i = 0; i < cookies.length; i++) {
+    const c = cookies[i].trim();
+    if (c.startsWith(name + '=')) {
+      return decodeURIComponent(c.substring(name.length + 1));
+    }
+  }
+  return '';
+}
+</script>
+
+
+
+<script>
+function envoyerStoryDirect(input) {
+  if (input.files.length === 0) return;
+
+  const fichier = input.files[0];
+  const formData = new FormData();
+  formData.append(fichier.type.startsWith("image") ? "image" : "video", fichier);
+
+  fetch("{% url 'ajax_ajouter_story' %}", {
+    method: "POST",
+    headers: {
+      "X-CSRFToken": getCSRFToken()
+    },
+    body: formData
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === "success") {
+      alert("Story ajoutée avec succès !");
+      location.reload(); // Recharge pour voir la nouvelle story
+    } else {
+      alert(data.message || "Erreur lors de l'ajout.");
+    }
+  })
+  .catch(error => {
+    console.error(error);
+    alert("Erreur réseau.");
+  });
+
+  // Réinitialiser input pour permettre un second envoi
+  input.value = "";
+}
+
+function getCSRFToken() {
+  const name = 'csrftoken';
+  const cookies = document.cookie.split(';');
+  for (let c of cookies) {
+    c = c.trim();
+    if (c.startsWith(name + '=')) {
+      return decodeURIComponent(c.substring(name.length + 1));
+    }
+  }
+  return '';
+}
+</script>
+
+
+
+
+
+
+
+
+{% endblock content %}

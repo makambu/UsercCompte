@@ -1,0 +1,247 @@
+{% extends 'head/home.html' %}
+{% load static %}
+{% block content %}
+
+<!-- Carousel de bienvenue -->
+<div class="carousel-inner mt-4">
+    <div class="carousel-item active position-relative">
+        <img src="{% static 'images/image_Vd.jpg' %}" class="d-block w-100"
+            style="height: 250px; object-fit: fill; object-position: top; border-radius: 8px;">
+
+        <!-- Zone de texte superposée -->
+        <div class="carousel-caption d-flex flex-column justify-content-end text-start pb-3"
+            style="bottom: 0; width: 100%; left: 0; right: 0;">
+            <h3 class="text-center fw-bold text-white mb-1">Bienvenue dans le monde des divertissements !</h3>
+            <p class="text-center" style="font-weight: 500;">Découvrez et interagissez avec des vidéos publiés pour
+                passer un bon temps.</p>
+        </div>
+    </div>
+</div>
+
+<div class="container pt-4">
+    <div class="row d-flex justify-content-between align-items-center mb-3">
+        <div class="col-auto d-flex align-items-center">
+            <a href="{% url 'homes' %}" class="me-3 text-decoration-none text-blue fs-4" title="Retour à l'accueil">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            <h4 class="text-primary mb-0 fw-bold"><i class="fas fa-video me-2"></i> Vidéos publiées</h4>
+        </div>
+    
+        <div class="col-md-6">
+            <form method="get" class="d-flex justify-content-end" role="search">
+                <input type="search" name="search" class="form-control me-2"
+                    placeholder="Rechercher une vidéo par titre ou auteur..." value="{{ search_query }}">
+        
+                <button class="btn btn-outline-primary me-2" type="submit">Rechercher</button>
+        
+                {% if search_query %}
+                <a href="{% url 'liste_videos' %}" class="btn btn-outline-secondary">Quitter</a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+    <hr style="border-color: rgb(121, 119, 119);">
+
+    {% for video in videos %}
+    <div class="card mb-4 shadow-sm p-3" style="font-size: 0.95rem;">
+        <!-- Auteur -->
+        <div class="d-flex align-items-center mb-2">
+            <a href="{% url 'voir_profil' video.auteur.id %}">
+                {% if video.auteur.image_profil %}
+                <img src="{{ video.auteur.image_profil.url }}" class="rounded-circle me-2" width="35" height="35"
+                    style="object-fit: fill;">
+                {% else %}
+                <img src="{% static 'images/image_4.png' %}" class="rounded-circle me-2" width="35" height="35"
+                    style="object-fit: fill;">
+                {% endif %}
+            </a>
+            <div class="flex-grow-1">
+                <a href="{% url 'voir_profil' video.auteur.id %}"
+                    class="fw-bold text-dark text-decoration-none text-capitalize">
+                    {{ video.auteur.nom }}
+                </a><br>
+                <small class="text-muted">publié le {{ video.date_creation|date:"d/m/Y H:i" }}</small>
+            </div>
+        </div>
+
+        <!-- Titre -->
+        <h6 class="fw-bold text-dark mb-2">{{ video.titre }}</h6>
+
+        <!-- Description scrollable -->
+        <div class="mb-2 px-2 py-1 border rounded bg-light" style="max-height: 80px; overflow-y: auto;">
+            <p class="mb-0 text-muted">{{ video.description }}</p>
+        </div>
+
+        <!-- Vidéo -->
+        <div class="mb-3">
+            <video controls class="video-player w-100 rounded shadow-sm" style="max-height: 250px;">
+                <source src="{{ video.fichier_video.url }}" type="video/mp4">
+                Votre navigateur ne supporte pas la lecture vidéo.
+            </video>
+        </div>
+
+        <!-- Interactions -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <form method="post" action="{% url 'liker_video' video.id %}" class="form-like-video">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                    ❤️ {{ video.likes.count }}
+                </button>
+            </form>
+            <a href="{{ video.fichier_video.url }}" download class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-download"></i> Télécharger
+            </a>
+        </div>
+
+        <!-- Commentaires -->
+    <div class="bloc-commentaire-video pt-2">
+        <h6 class="text-secondary fw-bold mb-2">
+            <i class="fas fa-comment-dots me-1"></i> Commentaires
+        </h6>
+        <div class="zone-commentaire-video mb-2 pe-2" style="max-height: 80px; overflow-y: auto;">
+            {% for commentaire in video.commentaires.all %}
+            <div class="mb-2 d-flex align-items-start">
+                {% if commentaire.user.image_profil %}
+                <img src="{{ commentaire.user.image_profil.url }}" class="rounded-circle me-2" width="32" height="32"
+                    style="object-fit: cover;" alt="profil">
+                {% else %}
+                <img src="{% static 'images/image_4.png' %}" class="rounded-circle me-2" width="32" height="32"
+                    style="object-fit: cover;" alt="profil par défaut">
+                {% endif %}
+                <div>
+                    <strong class="text-capitalize">
+                        <a href="{% url 'voir_profil' commentaire.user.id %}" class="text-dark text-decoration-none">
+                            {{ commentaire.user.nom }}
+                        </a>
+                    </strong>
+                    <span class="text-muted">: {{ commentaire.texte }}</span><br>
+                    <small class="text-muted">{{ commentaire.date_creation|date:"d/m/Y H:i" }}</small>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted small">Aucun commentaire.</p>
+            {% endfor %}
+        </div>
+    
+        <!-- Ajouter un commentaire -->
+        {% if utilisateur_connecte %}
+        <form method="post" action="{% url 'commenter_video' video.id %}" class="form-comment-video">
+            {% csrf_token %}
+            <div class="input-group">
+                <input type="text" name="texte" class="form-control form-control-sm" placeholder="Ajouter un commentaire..."
+                    required>
+                <button type="submit" class="btn btn-sm btn-outline-success">Commenter</button>
+            </div>
+        </form>
+        {% else %}
+        <p class="text-muted small">Connectez-vous pour commenter.</p>
+        {% endif %}
+    </div>
+    </div>
+    {% empty %}
+    <p class="text-muted">Aucune vidéo trouvée pour "{{ search_query }}"</p>
+    {% endfor %}
+</div>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const videos = document.querySelectorAll('.video-player');
+
+        videos.forEach(video => {
+            video.addEventListener('play', function () {
+                videos.forEach(otherVideo => {
+                    if (otherVideo !== video && !otherVideo.paused) {
+                        otherVideo.pause();
+                    }
+                });
+            });
+        });
+    });
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Liker une vidéo
+    document.querySelectorAll('.form-like-video').forEach(form => {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const url = form.action;
+            const csrf = form.querySelector('[name=csrfmiddlewaretoken]').value;
+            const btn = form.querySelector('button');
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrf,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.liked !== undefined && data.nb_likes !== undefined) {
+                    btn.innerHTML = `${data.liked ? '❤️' : '🤍'} ${data.nb_likes}`;
+                }
+            })
+            .catch(err => console.error('Erreur like vidéo:', err));
+        });
+    });
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const forms = document.querySelectorAll('form.form-comment-video');
+    console.log('Nombre de formulaires trouvés :', forms.length);  // ← Vérifie que c’est bien trouvé
+
+    forms.forEach(form => {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const url = form.action;
+            const csrf = form.querySelector('[name="csrfmiddlewaretoken"]').value;
+            const bloc = form.closest('.bloc-commentaire-video');
+            const container = bloc.querySelector('.zone-commentaire-video');
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrf,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: new FormData(form)
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log('Données reçues :', data);  // ← Pour voir si tout va bien
+                if (data.texte && data.auteur_nom && container) {
+                    const commentaire = document.createElement('div');
+                    commentaire.className = 'mb-2 d-flex align-items-start';
+                    commentaire.innerHTML = `
+                        <img src="${data.image_url || '/static/images/image_4.png'}"
+                             class="rounded-circle me-2" width="32" height="32" style="object-fit: cover;" alt="profil">
+                        <div>
+                            <strong class="text-capitalize">
+                                <a href="${data.profil_url}" class="text-dark text-decoration-none">${data.auteur_nom}</a>
+                            </strong>
+                            <span class="text-muted">: ${data.texte}</span><br>
+                            <small class="text-muted">${data.date}</small>
+                        </div>
+                    `;
+                    container.prepend(commentaire);
+                    form.reset();
+                }
+            })
+            .catch(err => {
+                console.error('Erreur AJAX commentaire vidéo:', err);
+            });
+        });
+    });
+});
+</script>
+
+
+
+
+
+{% endblock %}

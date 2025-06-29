@@ -1,0 +1,579 @@
+{% extends 'head/home.html' %}
+{% load static %}
+{% load widget_tweaks %}
+{% block content %}
+
+<style>
+    .rating {
+        direction: rtl;
+        display: flex;
+        justify-content: start;
+        gap: 5px;
+        margin-bottom: 1rem;
+    }
+    .rating input[type="radio"] {
+        display: none;
+    }
+    .rating label {
+        font-size: 2rem;
+        color: #ddd;
+        cursor: pointer;
+        transition: color 0.3s;
+    }
+    .rating input[type="radio"]:checked ~ label,
+    .rating label:hover,
+    .rating label:hover ~ label {
+        color: #ffc107;
+    }
+    .card h4 i {
+        font-size: 1.3rem;
+    }
+    .card {
+        border-radius: 16px;
+        border: 1px solid #e3e3e3;
+    }
+    ul.list-unstyled li {
+        font-size: 15px;
+    }
+</style>
+
+<div class="container mt-3 py-4">
+    <div class="row">
+        <div class="col-12 d-flex align-items-center mt-5 mb-3">
+            <a href="{% url 'homes' %}" class="me-3 text-decoration-none text-blue fs-4" title="Retour à l'accueil">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            <h4 class="mb-0 fw-bold">🌐 À propos du site</h4>
+        </div>
+        <hr style="border-color: rgb(121, 119, 119);">
+    </div>
+
+    <p class="text-muted fst-italic mt-2" style="text-align: center;">
+        Bienvenue sur <strong>CGM</strong>, votre plateforme communautaire dédiée au partage, à l’échange d’idées et à la valorisation de vos contenus.
+    </p>
+
+    <div class="text-center mb-2">
+        <img src="{% static 'images/Logo_Maka.png' %}" alt="Image du site" style="width: 100%; max-height: 300px; object-fit: fill;" class="rounded shadow">
+    </div>
+
+    <div class="text-center mb-4">
+        <video controls style="width: 100%; max-height: 250px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <source src="{% static 'videos/Cgm_app.mp4' %}" type="video/mp4">
+            Votre navigateur ne supporte pas la lecture vidéo.
+        </video>
+        <small class="text-muted d-block mt-2">Extrait de 30 secondes expliquant le fonctionnement du site</small>
+    </div>
+
+    <div class="card p-4 mb-4 shadow-sm">
+        <h4 class="text-primary mb-3">
+            <i class="fas fa-gem me-2"></i> Pourquoi choisir CGM ?
+        </h4>
+        <ul class="list-unstyled">
+            <li class="mb-2"><i class="fas fa-bolt text-warning me-2"></i> Réactivité en temps réel avec AJAX intégré.</li>
+            <li class="mb-2"><i class="fas fa-thumbs-up text-success me-2"></i> Système de likes/commentaires interactif.</li>
+            <li class="mb-2"><i class="fas fa-video text-danger me-2"></i> Partage de vidéos et blogs personnels.</li>
+            <li class="mb-2"><i class="fas fa-user-check text-info me-2"></i> Interface claire, intuitive et centrée utilisateur.</li>
+            <li class="mb-2"><i class="fas fa-shield-alt text-primary me-2"></i> Engagement fort pour la confidentialité et la sécurité.</li>
+        </ul>
+    </div>
+
+    <div class="card p-4 mb-4 shadow-sm text-center">
+        <h4 class="text-secondary mb-3">
+            <i class="fas fa-chart-line me-2"></i> Nos chiffres en un clin d’œil
+        </h4>
+        <div class="row">
+            <div class="col-6 col-md-3 mb-3">
+                <h5 class="text-primary">+5 000</h5>
+                <small>Utilisateurs inscrits</small>
+            </div>
+            <div class="col-6 col-md-3 mb-3">
+                <h5 class="text-success">+2 000</h5>
+                <small>Publications actives</small>
+            </div>
+            <div class="col-6 col-md-3 mb-3">
+                <h5 class="text-warning">+1 500</h5>
+                <small>Commentaires</small>
+            </div>
+            <div class="col-6 col-md-3 mb-3">
+                <h5 class="text-danger">98%</h5>
+                <small>Satisfaction des membres</small>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- INFOS GÉNÉRALES -->
+    <div class="card p-4 mb-4 shadow-sm">
+        <h4 class="text-primary mb-3" style="font-size: 26px;">
+            <i class="fas fa-info-circle me-2"></i> Informations générales
+        </h4>
+        <p class="text-muted" style="text-align: justify;">
+            Cette plateforme est un espace numérique innovant conçu pour <strong>favoriser l’interaction</strong> entre les
+            utilisateurs autour de contenus pertinents.
+            Elle offre une expérience fluide et intuitive à travers les fonctionnalités suivantes :
+        </p>
+        <ul class="list-unstyled mt-3 ps-2">
+            <li class="mb-2">
+                <i class="fas fa-user-plus text-success me-2"></i>
+                Créer un compte personnel et personnaliser votre profil.
+            </li>
+            <li class="mb-2">
+                <i class="fas fa-users text-info me-2"></i>
+                Explorer les profils d'autres membres et élargir votre réseau.
+            </li>
+            <li class="mb-2">
+                <i class="fas fa-heart text-danger me-2"></i>
+                Liker des publications et montrer votre appréciation.
+            </li>
+            <li class="mb-2">
+                <i class="fas fa-comment-alt text-warning me-2"></i>
+                Commenter les blogs pour engager des discussions enrichissantes.
+            </li>
+            <li class="mb-2">
+                <i class="fas fa-star text-primary me-2"></i>
+                Noter le site si vous appréciez votre expérience.
+            </li>
+        </ul>
+        <p class="mt-3 text-muted" style="font-size: 14px;">
+            Notre objectif est de construire une communauté respectueuse, dynamique et centrée sur le partage de la
+            connaissance et des idées.
+        </p>
+    </div>
+
+
+    <!-- MISSION -->
+    <div class="card p-4 mb-4 shadow-sm">
+        <h4 class="text-primary mb-3" style="font-size: 26px;">
+            <i class="fas fa-bullseye me-2"></i> Notre mission
+        </h4>
+        <p>
+            <strong>Favoriser la collaboration, l’apprentissage et l’expression libre</strong> au sein d’une communauté
+            sécurisée
+            et respectueuse, grâce à une plateforme moderne, simple d’utilisation et accessible à tous.
+        </p>
+        <ul class="list-unstyled mt-3 ps-2">
+            <li class="mb-2">
+                <i class="fas fa-users text-info me-2"></i>
+                Créer un espace social interactif pour partager des idées via des blogs et commentaires.
+            </li>
+            <li class="mb-2">
+                <i class="fas fa-lock text-secondary me-2"></i>
+                Garantir la sécurité et la confidentialité des données des utilisateurs.
+            </li>
+            <li class="mb-2">
+                <i class="fas fa-globe text-success me-2"></i>
+                Promouvoir un accès équitable à l’information et à la publication.
+            </li>
+            <li class="mb-2">
+                <i class="fas fa-bolt text-warning me-2"></i>
+                Offrir des outils rapides, fluides et intuitifs pour une navigation agréable.
+            </li>
+            <li class="mb-2">
+                <i class="fas fa-heart text-danger me-2"></i>
+                Encourager des échanges respectueux, constructifs et bienveillants grâce aux j'aimes et commentaires.
+            </li>
+        </ul>
+    </div>
+
+
+    <!-- DIRECTIVES -->
+    <div class="card p-4 mb-4 shadow-sm">
+        <h4 class="text-primary mb-3" style="font-size: 26px;">
+            <i class="fas fa-shield-alt me-2"></i> Règles du site
+        </h4>
+        <ul class="list-unstyled ps-2">
+            <li class="mb-2"><i class="fas fa-user-plus text-success me-2"></i> Créer un compte utilisateur</li>
+            <li class="mb-2"><i class="fas fa-sign-in-alt text-primary me-2"></i> Se connecter</li>
+            <li class="mb-2"><i class="fas fa-users text-info me-2"></i> Consulter les profils existants</li>
+            <li class="mb-2"><i class="fas fa-blog text-warning me-2"></i> Publier des blogs/Vidéos</li>
+            <li class="mb-2"><i class="fas fa-bell text-secondary me-2"></i> Voir les notifications</li>
+            <li class="mb-2"><i class="fas fa-ban text-danger me-2"></i> Pas de contenu haineux, offensant ou illégal</li>
+            <li class="mb-2"><i class="fas fa-user-circle text-dark me-2"></i> Utilisez une photo de profil réelle et
+                respectueuse</li>
+        </ul>
+    </div>
+
+
+    <!-- CONTACT -->
+    <div class="card p-4 mb-4 shadow-sm">
+        <h4 class="text-primary mb-3" style="font-size: 26px;">
+            <i class="fas fa-envelope-open-text me-2"></i> Nous contacter
+        </h4>
+    
+        <p class="mb-2">
+            <i class="fas fa-envelope text-danger me-2"></i>
+            <strong>Email :</strong> <a href="mailto:makambuortho2@gmail.com">makambuortho2@gmail.com</a>
+        </p>
+    
+        <p class="mb-2">
+            <i class="fas fa-phone-alt text-success me-2"></i>
+            <strong>Téléphone :</strong> +243 811 966 208 / +243 985 313 349
+        </p>
+    
+        <p class="mb-0">
+            <i class="fas fa-map-marker-alt text-warning me-2"></i>
+            <strong>Localisation :</strong> Kinshasa, Kenge-Ville | RDC 
+        </p>
+    </div>
+
+
+    <!-- SIGNALEMENT DE PROBLÈME -->
+    <div class="card p-4 mb-4 shadow-sm">
+        <h4 class="text-danger mb-3">
+            <i class="fas fa-exclamation-triangle me-2"></i> Rencontrez-vous un problème ?
+        </h4>
+
+        {% if utilisateur_connecte %}
+        <form id="probleme-form" method="post" action="{% url 'AboutSIte' %}">
+            {% csrf_token %}
+            <div class="mb-3">
+                {{ probleme_form.message|add_class:'form-control shadow-sm'|attr:'rows:3'|attr:'placeholder:Décrivez le problème ici...' }}
+            </div>
+
+            <div class="text-center">
+                <button type="submit" class="btn btn-outline-danger shadow btn-sm w-50"
+                    style="border-radius: 35px; font-weight: bold;">
+                    <i class="fas fa-bug me-2"></i> Signaler
+                </button>
+            </div>
+        </form>
+        <div id="message-signalement" class="mt-2 text-center small"></div>
+        {% else %}
+        <p class="text-muted">Connectez-vous pour signaler un problème.</p>
+        {% endif %}
+    </div>
+
+    
+    <!-- NOTE MOYENNE -->
+    <div class="text-center mb-4">
+        <h5 class="text-success">
+            Note moyenne :
+            <span class="fw-bold">{{ moyenne_note }}</span> / 5
+            <span style="color: #ffc107;">⭐</span>
+        </h5>
+    </div>
+
+
+    <!-- COMMENTAIRES -->
+    <div class="card p-4 mb-4 shadow-sm">
+        <h4 class="text-warning mb-3"><i class="fas fa-comments"></i> Commentaires</h4>
+    
+        {% if utilisateur_connecte %}
+        <form method="post" id="form-commentaire" class="mb-3">
+            {% csrf_token %}
+            <div class="mb-2">
+                {{ commentaire_form.commentaire|add_class:'form-control' }}
+            </div>
+            <button type="submit" name="comment_submit" class="btn btn-sm btn-outline-primary shadow w-50"
+                style="border-radius: 25px; font-weight: bold;">
+                <i class="fas fa-paper-plane"></i> Poster
+            </button>
+        </form>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Connectez-vous pour commenter.
+        </div>
+        {% endif %}
+    
+        <div class="comment-list bg-light p-3 rounded" style="max-height: 250px; overflow-y: auto;">
+            {% for c in commentaires %}
+            <div class="border-bottom pb-2 mb-2">
+                <strong class="text-primary"><i class="fas fa-user-circle"></i> {{ c.user.nom }} {{ c.user.prenom}}</strong>
+                <small class="text-muted d-block">
+                    <i class="far fa-clock"></i> {{ c.created_on|date:"d/m/Y H:i" }}
+                </small>
+                {% if c.commentaire %}
+                <p class="mt-1 mb-0">{{ c.commentaire }}</p>
+                {% endif %}
+            </div>
+            {% empty %}
+            <p class="text-muted">Aucun commentaire pour l'instant.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} p-2 py-1 mb-2" style="font-size: 0.9rem;">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <!-- NOTATION INTERACTIVE -->
+    <div class="card p-4 mb-4 shadow-sm">
+        <h4 class="text-danger">
+            <i class="fas fa-star me-2"></i> Noter ce site
+        </h4>
+    
+        {% if utilisateur_connecte %}
+        {% if note_posted %}
+        <p class="text-success fw-bold">
+            <i class="fas fa-check-circle me-2"></i> Merci pour votre note !
+        </p>
+        {% else %}
+        <form method="post" id="noteForm">
+            {% csrf_token %}
+            <div class="rating">
+                {% for i in "54321" %}
+                <input type="radio" id="star{{ i }}" name="note" value="{{ i }}">
+                <label for="star{{ i }}" title="{{ i }} étoile{{ i|pluralize }}">★</label>
+                {% endfor %}
+            </div>
+    
+            <div class="text-center">
+                <button type="submit" name="note_submit" class="btn btn-outline-success shadow btn-sm w-50"
+                    style="border-radius: 35px; font-weight: bold;">
+                    <i class="fas fa-paper-plane me-2"></i> Envoyer
+                </button>
+            </div>
+        </form>
+        {% endif %}
+        {% else %}
+        <p class="text-muted">Connectez-vous pour noter le site.</p>
+        {% endif %}
+    </div>
+
+
+
+    <!-- TÉMOIGNAGES / PARTENAIRES / NEWSLETTER -->
+    <div class="card p-4 mb-5 shadow-sm bg-white rounded-4">
+    <!-- Témoignages -->
+    <h4 class="text-secondary mb-4">
+        <i class="fas fa-quote-left me-2 text-warning"></i> Témoignages
+    </h4>
+    
+    <div class="mb-3">
+        <p class="mb-1 fst-italic text-dark">
+            "Un site très utile, surtout pour garder contact avec d'autres membres."
+        </p>
+        <span class="text-muted small d-block text-end">— <em>Utilisateur</em></span>
+    </div>
+
+    <div class="mb-3">
+        <p class="mb-1 fst-italic text-dark">
+            "J’adore l’interface claire et les fonctionnalités pratiques."
+        </p>
+        <span class="text-muted small d-block text-end">— <em>Autre utilisateur</em></span>
+    </div>
+
+    <hr class="my-4">
+
+    <!-- Partenaires -->
+    <h4 class="text-secondary mb-3">
+        <i class="fas fa-handshake me-2 text-success"></i> Partenaires
+    </h4>
+    <ul class="list-unstyled ms-2">
+        <li class="mb-1">
+            <i class="fas fa-building me-2 text-info"></i> Ministère du Numérique
+        </li>
+        <li class="mb-1">
+            <i class="fas fa-code me-2 text-info"></i> DevTech Africa
+        </li>
+        <li class="mb-1">
+            <i class="fas fa-globe me-2 text-info"></i> Provider Group
+        </li>
+    </ul>
+
+    <hr class="my-4">
+
+    <!-- Abonnement Newsletter -->
+    {% if messages %}
+    <div id="message-container" class="position-fixed top-0 start-50 translate-middle-x mt-3"
+        style="z-index: 9999; width: 100%; max-width: 400px;">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} text-center shadow" style="font-size: 14px;">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <h4 class="text-secondary mb-3">
+        <i class="fas fa-envelope-open-text me-2 text-primary"></i> S’abonner à CGM
+    </h4>
+    <form method="post" id="newsletter-form">
+        {% csrf_token %}
+        <div class="input-group">
+            <input type="email" name="email_news" class="form-control rounded-start" placeholder="Votre email" required>
+            <button type="submit" name="newsletter_submit" class="btn btn-outline-primary">
+                <i class="fas fa-paper-plane me-1"></i> S’abonner
+            </button>
+        </div>
+    </form>
+</div>
+
+    <div class="text-center mt-5 mb-3">
+        <blockquote class="blockquote text-muted fst-italic">
+            "Chaque jour j'entame une nouvelle vie, car leurs histoires nous inspirent." – Ortho Mak
+        </blockquote>
+    </div>
+</div>
+
+<!-- CSS ÉTOILES -->
+<style>
+    .rating {
+        direction: rtl;
+        display: inline-flex;
+    }
+
+    .rating input[type="radio"] {
+        display: none;
+    }
+
+    .rating label {
+        font-size: 1.8rem;
+        color: #ccc;
+        cursor: pointer;
+        transition: color 0.2s ease;
+    }
+
+    .rating input:checked~label,
+    .rating label:hover,
+    .rating label:hover~label {
+        color: #f5c518;
+    }
+</style>
+
+<script>
+  setTimeout(function () {
+    const msg = document.getElementById("message-container");
+    if (msg) {
+      msg.style.display = "none";
+    }
+  }, 5000);  // Masque le message après 5 secondes
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Formulaire de signalement
+    const formProbleme = document.getElementById('probleme-form');
+    if (formProbleme) {
+        formProbleme.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const messageBox = document.getElementById('message-signalement');
+            const csrf = formProbleme.querySelector('[name=csrfmiddlewaretoken]').value;
+            const formData = new FormData(formProbleme);
+            formData.append("probleme_submit", "1");
+
+            fetch(formProbleme.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrf,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    messageBox.innerHTML = '<span class="text-success"> Problème signalé avec succès.</span>';
+                    formProbleme.reset();
+                } else {
+                    messageBox.innerHTML = '<span class="text-danger"> Une erreur est survenue. Vérifiez votre message.</span>';
+                }
+            })
+            .catch(err => {
+                messageBox.innerHTML = '<span class="text-danger"> Erreur de connexion.</span>';
+            });
+        });
+    }
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const formComment = document.getElementById('form-commentaire');
+    if (formComment) {
+        formComment.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const csrf = formComment.querySelector('[name=csrfmiddlewaretoken]').value;
+            const formData = new FormData(formComment);
+            formData.append("comment_submit", "1");
+
+            fetch(formComment.action || window.location.href, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrf,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(res => res.text())
+            .then(() => {
+                // Option : actualise la page ou recharge les commentaires
+                window.location.reload();  // ou mieux, faire une fonction qui insère le commentaire sans reload
+            })
+            .catch(err => {
+                alert(" Erreur lors de l'envoi du commentaire.");
+            });
+        });
+    }
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const formNote = document.getElementById('noteForm');
+    if (formNote) {
+        formNote.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const csrf = formNote.querySelector('[name=csrfmiddlewaretoken]').value;
+            const formData = new FormData(formNote);
+            formData.append("note_submit", "1");
+
+            fetch(formNote.action || window.location.href, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrf,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(res => res.text())
+            .then(() => {
+                window.location.reload();  // actualise pour afficher message
+            })
+            .catch(err => {
+                alert(" Une erreur est survenue lors de l'envoi de la note.");
+            });
+        });
+    }
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const formNote = document.getElementById('newsletter-form');
+    if (formNote) {
+        formNote.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const csrf = formNote.querySelector('[name=csrfmiddlewaretoken]').value;
+            const formData = new FormData(formNote);
+            formData.append("newsletter_submit", "1");
+
+            fetch(formNote.action || window.location.href, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrf,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(res => res.text())
+            .then(() => {
+                window.location.reload();  // actualise pour afficher message
+            })
+            .catch(err => {
+                alert("❌ Une erreur est survenue lors de s'abonner");
+            });
+        });
+    }
+});
+</script>
+
+
+
+
+{% endblock %}

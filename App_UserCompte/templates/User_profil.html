@@ -1,0 +1,775 @@
+{% extends 'head/home.html' %}
+{% load static %}
+<script>const defaultIma = "{% static 'images/image_4.png' %}";</script>
+
+{% load widget_tweaks %}
+{% load custom_tags %}
+
+
+
+{% block content %}
+
+<style>
+  .d-none {
+    display: none !important;
+  }
+</style>
+
+{% if messages %}
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div id="ajax-message" class="position-fixed top-0 start-50 translate-middle-x mt-3 text-center"
+     style="z-index: 9999; display: none; max-width: 400px;">
+</div>
+
+
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-12 d-flex align-items-center mt-5 mb-3">
+      <a href="{% url 'homes' %}" class="me-3 text-decoration-none text-blue fs-4" title="Retour à l'accueil">
+        <i class="fas fa-chevron-left"></i>
+      </a>
+      <h4 class="mb-0 fw-bold">👤 My Profil</h4>
+    </div>
+    <hr style="border-color: rgb(121, 119, 119);">
+  </div>
+
+  <div class="row">
+    <!-- Colonne image de profil -->
+    <div class="col-md-4 mb-2 d-flex">
+    <div class="card shadow p-3 w-100 d-flex flex-column justify-content-between"
+      style="max-width: 100%; text-align: center; min-height: 420px;">
+    
+      <!-- CARROUSEL PROFIL -->
+      {% if all_images_profil %}
+      <div class="text-center mb-0 position-relative" id="carouselContainer" style="max-width: 300px; margin: auto;">
+        <img id="carouselImage" src="{{ all_images_profil.0.image.url }}" class="rounded-circle mx-auto d-block"
+          onclick="zoomImage(this.src)"
+          style="width: 100%; aspect-ratio: 1/1; object-fit: fill;" />
+    
+        <!-- Navigation gauche -->
+        <button onclick="changeImage(-1)" class="btn btn-sm btn-light position-absolute top-50 start-0 translate-middle-y"
+          style="border-radius: 50%;">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+    
+        <!-- Navigation droite -->
+        <button onclick="changeImage(1)" class="btn btn-sm btn-light position-absolute top-50 end-0 translate-middle-y"
+          style="border-radius: 50%;">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+    
+        <!-- Date -->
+        <div id="imageDate" class="text-muted mt-1" style="font-size: 12px;">
+          {{ all_images_profil.0.date_ajout|date:"d M Y H:i" }}
+        </div>
+      </div>
+      {% else %}
+      <!-- Image par défaut si aucun historique -->
+      <img src="{% static 'images/image_4.png' %}" class="rounded-circle mx-auto d-block"
+        style="width: 100%; aspect-ratio: 1/1; object-fit: fill;" />
+      {% endif %}
+    
+      <!-- Anciennes images (miniatures avec pagination) -->
+    
+      <!-- PAGINATION -->
+      {% if images_historiques.has_other_pages %}
+      <div class="d-flex justify-content-center mt-2 pagination">
+        {% if images_historiques.has_previous %}
+        <a href="?page_img={{ images_historiques.previous_page_number }}"
+          class="btn btn-outline-secondary me-2">Précédent</a>
+        {% endif %}
+        {% if images_historiques.has_next %}
+        <a href="?page_img={{ images_historiques.next_page_number }}" class="btn btn-outline-secondary">Suivant</a>
+        {% endif %}
+      </div>
+      {% endif %}
+    
+      <!-- Infos utilisateur -->
+      <div class="mt-0 d-flex justify-content-center align-items-center flex-wrap gap-2">
+        <h5 class="mb-0">{{ user_profil.nom }} {{ user_profil.prenom }}</h5>
+        <span class="text-muted" style="font-size: 14px;">📞 {{ user_profil.telephone }}</span>
+      </div>
+    
+      <!-- Likes -->
+      {% if total_likes %}
+      <div class="text-center">
+        <i class="fa fa-heart text-danger"></i> {{ total_likes }} personne{% if total_likes > 1 %}s{% endif %} aime votre
+        profil
+      </div>
+
+      {% if likers %}
+      <div class="mt-2">
+        <div class="likers-carousel d-flex" style="overflow-x: auto; gap: 10px; padding-bottom: 4px;">
+          {% for liker in likers %}
+          <a href="{% url 'voir_profil' liker.id %}" title="{{ liker.nom }} {{ liker.prenom }}" style="flex: 0 0 auto;">
+            {% if liker.image_profil %}
+            <img src="{{ liker.image_profil.url }}" alt="{{ liker.nom }}"
+              style="width: 40px; height: 40px; object-fit: fill; border-radius: 50%; border: 2px solid #ccc;">
+            {% else %}
+            <img src="{% static 'images/image_4.png' %}" alt="Default"
+              style="width: 40px; height: 40px; object-fit: fill; border-radius: 50%; border: 2px solid #ccc;">
+            {% endif %}
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      {% endif %}
+    
+      <!-- Boutons -->
+      <div class="d-flex justify-content-end">
+        <a href="javascript:void(0)" onclick="toggleSection('amisSection')"
+          class="btn btn-outline-primary btn-sm mt-2 w-100 fw-bold" style="font-size: 15px; border-radius: 25px;">
+          <i class="fas fa-users me-1"></i> Voir ami(e)s
+        </a>
+    
+        <a href="javascript:void(0);" onclick="toggleSection('editSection')"
+          class="btn btn-outline-primary btn-sm mt-2 w-100 fw-bold"
+          style="font-size: 15px; border-radius: 25px; cursor: pointer;">
+          <i class="fa fa-user me-1"></i>Modifier profil
+        </a>
+      </div>
+    </div>
+
+    </div>
+
+    <!-- Colonne informations -->
+    <div class="col-md-8 mb-5">
+      <div class="card shadow p-4" style="border-radius: 20px;">
+        <h5 class="mb-4 text-danger">📝 Informations du profil</h5>
+        <div class="row">
+          <div class="col-md-6 mb-3"><strong>Nom :</strong> {{ user_profil.nom }}</div>
+          <div class="col-md-6 mb-3"><strong>Post-nom :</strong> {{ user_profil.post_nom }}</div>
+          <div class="col-md-6 mb-3"><strong>Prénom :</strong> {{ user_profil.prenom }}</div>
+          <div class="col-md-6 mb-3"><strong>Sexe :</strong> {{ user_profil.get_sexe_display }}</div>
+          <div class="col-md-6 mb-3"><strong>Téléphone :</strong> {{ user_profil.telephone }}</div>
+          <div class="col-md-6 mb-3"><strong>Email :</strong> {{ user_profil.email }}</div>
+
+          <div class="col-md-6 mb-3">
+            <strong>Profession :</strong> {{ user_profil.profession }}
+          </div>
+
+          <div class="col-md-6 mb-3"><strong>Date de naissance :</strong> {{ user_profil.date_naissance }}</div>
+          <div class="col-md-6 mb-3"><strong>Lieu de naissance :</strong> {{ user_profil.lieu_nais }}</div>
+          <div class="col-md-6 mb-3"><strong>Pays d'origine :</strong> {{ user_profil.pays }}</div>
+          <div class="col-md-6 mb-3"><strong>Ville actuelle :</strong> {{ user_profil.ville }}</div>
+          <div class="col-md-6 mb-3"><strong>Statut du compte :</strong> {{ user_profil.get_status_display }}</div>
+          <div class="col-md-6 mb-3"><strong>Date de création :</strong> {{ user_profil.created_on|date:"d/m/Y H:i" }}</div>
+          <div class="col-md-6 mb-3"><strong>Dernièreconnexion:</strong> {{ user_profil.derniere_connexion|date:"d/m/YH:i" }}</div>
+          <div class="col-md-12 mt-3">
+            <strong>Biographie :</strong><br>
+            <div
+              style="max-height: 50px; overflow-y: auto; word-break: break-word; padding: 5px; background-color: #f9f9f9; border-radius: 10px;">
+              {{ user_profil.biographie }}
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Bouton pour rédiger un blog -->
+      <div class="row mt-1">
+        <div class="col-4 text-start">
+          <button class="btn btn-secondary shadow btn-sm fw-bold w-100" onclick="toggleSection('myBlogsSection')"
+            style="border-radius: 20px;">
+            📘 Voir blogs
+          </button>
+        </div>
+        <div class="col-4 text-center">
+          <button class="btn btn-secondary shadow btn-sm fw-bold w-100" onclick="toggleSection('blogFormSection')"
+            style="border-radius: 20px;">
+            ✍️ Rédiger blog
+          </button>
+        </div>
+        <div class="col-4 text-end">
+          <button class="btn btn-secondary shadow btn-sm fw-bold w-100" onclick="toggleSection('videoFormSection')"
+            style="border-radius: 20px;">
+            🎬 Publier vidéo
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- Formulaire de blog masqué -->
+    <div id="blogFormSection" class="mt-1 mb-3" style="display: none;">
+      <div class="card shadow p-4" style="border-radius: 20px;">
+        <h5 class="text-success mb-3">📰 Créer un nouvel blog</h5>
+        <form method="post" enctype="multipart/form-data" action="{% url 'publier_blog' %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="id_titre" class="form-label"><strong>Titre</strong></label>
+            {{ form_blog.titre|add_class:"form-control" }}
+          </div>
+          <div class="mb-3">
+            <label for="id_image" class="form-label"><strong>Image d’illustration</strong></label>
+            {{ form_blog.image|add_class:"form-control" }}
+          </div>
+          <div class="mb-3">
+            <label for="id_contenu" class="form-label"><strong>Description</strong></label>
+            {{ form_blog.contenu|add_class:"form-control" }}
+          </div>
+          <div class="mb-3">
+            <label for="id_statut" class="form-label"><strong>Statut</strong></label>
+            {{ form_blog.statut|add_class:"form-select" }}
+          </div>
+          <div class="text-end">
+            <button type="submit" class="btn btn-outline-primary shadow w-50 fw-bold" style="border-radius: 20px;"
+            style="border-radius: 25px;">
+              🚀 Publier
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+        <!-- Section publier vidéo -->
+    <div id="videoFormSection" class="card p-4 mb-5 shadow border-0" style="display: none; border-radius: 12px;">
+      <h4 class="text-primary fw-bold mb-3 d-flex align-items-center">
+        <i class="fas fa-upload me-2"></i> Publier une nouvelle vidéo
+      </h4>
+    
+      <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form_video.non_field_errors }}
+    
+        <!-- Titre -->
+        <div class="mb-3">
+          <label for="{{ form_video.titre.id_for_label }}" class="form-label fw-semibold">
+            <i class="fas fa-heading me-1 text-muted"></i> Titre de la vidéo
+          </label>
+          {{ form_video.titre|add_class:"form-control" }}
+        </div>
+    
+        <!-- Description -->
+        <div class="mb-3">
+          <label for="{{ form_video.description.id_for_label }}" class="form-label fw-semibold">
+            <i class="fas fa-align-left me-1 text-muted"></i> Description
+          </label>
+          {{ form_video.description|add_class:"form-control" }}
+        </div>
+    
+        <!-- Upload Vidéo -->
+        <div class="mb-3">
+          <label for="{{ form_video.fichier_video.id_for_label }}" class="form-label fw-semibold">
+            <i class="fas fa-video me-1 text-muted"></i> Sélectionnez une vidéo (MP4, max 50 Mo)
+          </label>
+          {{ form_video.fichier_video|add_class:"form-control" }}
+        </div>
+    
+        <!-- Prévisualisation -->
+        <div class="mb-4" id="video-preview" style="display: none;">
+          <label class="form-label fw-semibold text-secondary">
+            <i class="fas fa-eye me-1"></i> Aperçu de la vidéo
+          </label>
+          <video controls id="preview-player" class="w-100 border rounded shadow-sm" style="max-height: 250px;"></video>
+        </div>
+    
+        <!-- Bouton de soumission -->
+        <div class="text-end">
+          <button type="submit" name="video_submit" class="btn btn-outline-success px-4 py-2 shadow-sm"
+          style="border-radius: 25px;">
+            <i class="fas fa-paper-plane me-1"></i> Publier ma vidéo
+          </button>
+        </div>
+      </form>
+    </div>
+
+
+
+
+    <!-- Section voir mes blogs -->
+    <div id="myBlogsSection" class="mt-2 mb-4" style="display: none;">
+      <div class="card shadow p-4" style="border-radius: 20px;">
+        <h5 class="text-primary mb-3">📚 Mes Blogs</h5>
+
+        {% if blogs_user %}
+        <div class="row">
+          {% for blog in blogs_user %}
+          <div class="col-md-6 mb-3">
+            <div class="card h-100 shadow-sm">
+              {% if blog.image %}
+              <img src="{{ blog.image.url }}" class="card-img-top rounded-top" style="height: 200px; object-fit: fill;">
+              {% endif %}
+              <div class="card-body d-flex flex-column">
+                <h6 class="card-title text-dark fw-bold">{{ blog.titre }}</h6>
+
+                <p class="card-text"
+                  style="max-height: 80px; overflow-y: auto; white-space: pre-line; text-align: justify;">
+                  {{ blog.contenu|truncatechars:10000 }}
+                </p>
+                <p class="text-muted mb-1"><strong>Date publié :</strong> {{ blog.date_creation|date:"d/m/Y H:i" }}</p>
+                <p class="text-muted mb-1"><strong>Statut :</strong> {{ blog.get_statut_display }}</p>
+
+                {% if blog.statut == 'publié' %}
+                <div class="border-top pt-2 mt-2 d-flex justify-content-between align-items-center text-muted small">
+                  <div>
+                    <i class="fa fa-heart text-danger"></i>
+                    {% if blog.likes.count > 0 %}
+                    {{ blog.likes.count }} J’aime
+                    {% else %}
+                    Aucun j’aime
+                    {% endif %}
+                  </div>
+                  <div>
+                    <i class="fa fa-comments text-secondary"></i>
+                    {% if blog.commentaires.count > 0 %}
+                    {{ blog.commentaires.count }} Commentaire(s)
+                    {% else %}
+                    Aucun commentaire
+                    {% endif %}
+                  </div>
+                </div>
+                {% endif %}
+
+                <div class="mt-auto d-flex justify-content-between align-items-center">
+                  <!-- Bouton Modifier avec JS -->
+                  <button class="btn btn-warning w-50 btn-sm" type="button" onclick="toggleForm({{ blog.id }})">
+                    Modifier ce blog
+                  </button>
+
+                  <!-- Formulaire Supprimer -->
+                  <form action="{% url 'supprimer_blog' blog.id %}" method="post" onsubmit="return confirmDelete();"
+                    style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger w-30 btn-sm">
+                      Supprimer ce blog
+                    </button>
+                  </form>
+                </div>
+
+                <!-- Formulaire de modification masqué -->
+                <div id="editBlogForm{{ blog.id }}" style="display: none;" class="card p-3 mb-1 mt-3"
+                  style="border-radius: 15px; max-width: 600px;">
+                  <h6 class="text-success mb-2 fw-semibold">🛠️ Modifier ce blog</h6>
+                  <form method="post" enctype="multipart/form-data" action="{% url 'modifier_blog' blog.id %}">
+                    {% csrf_token %}
+
+                    {% with form=form_modifications|get_item:blog.id %}
+                    <div class="mb-2">
+                      <label for="id_titre_{{ blog.id }}" class="form-label fw-semibold">Titre</label>
+                      {{ form.titre|add_class:"form-control form-control-sm" }}
+                    </div>
+
+                    <div class="mb-2">
+                      <label for="id_image_{{ blog.id }}" class="form-label fw-semibold">Image d’illustration</label>
+                      {{ form.image|add_class:"form-control form-control-sm" }}
+                    </div>
+
+                    <div class="mb-2">
+                      <label for="id_contenu_{{ blog.id }}" class="form-label fw-semibold">Description</label>
+                      {% render_field form.contenu class="form-control form-control-sm" rows="4" %}
+                    </div>
+
+                    <div class="mb-3">
+                      <label for="id_statut_{{ blog.id }}" class="form-label fw-semibold">Statut</label>
+                      {{ form.statut|add_class:"form-select form-select-sm" }}
+                    </div>
+                    {% endwith %}
+
+                    <div class="text-end">
+                      <button type="submit" class="btn btn-outline-success shadow btn-sm fw-bold px-4"
+                      style="border-radius: 25px;">
+                        💾 Enregistrer
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+
+
+                <!-- Fin Formulaire -->
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        <div class="mt-3">
+          <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+              {% if blogs_user.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ blogs_user.previous_page_number }}">Précédent</a>
+              </li>
+              {% endif %}
+              {% for num in blogs_user.paginator.page_range %}
+              <li class="page-item {% if blogs_user.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+              </li>
+              {% endfor %}
+              {% if blogs_user.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ blogs_user.next_page_number }}">Suivant</a>
+              </li>
+              {% endif %}
+            </ul>
+          </nav>
+        </div>
+
+        {% else %}
+        <p class="text-muted">Vous n’avez encore publié ou rédigé aucun blog. Cliquez sur <strong>“Rédiger ton
+            Blog”</strong> pour en créer un !</p>
+        {% endif %}
+      </div>
+    </div>
+
+
+  </div>
+
+  <!-- Reste du code inchangé... -->
+
+
+
+
+  <!-- Section de modification du profil (cachée par défaut) -->
+  <div id="editSection" class="card shadow-sm rounded-3 p-4 mb-4" style="display: none;">
+    <h5 class="text-primary mb-4 fw-bold d-flex align-items-center">
+      <i class="fas fa-pencil-alt me-2"></i>
+      Modifier mon profil ou ajouter des informations manquantes
+    </h5>
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="id_nom" class="form-label fw-semibold">Nom</label>
+          {{ form.nom|add_class:"form-control" }}
+        </div>
+
+        <div class="col-md-6">
+          <label for="id_post_nom" class="form-label fw-semibold">Post-nom</label>
+          {{ form.post_nom|add_class:"form-control" }}
+        </div>
+
+        <div class="col-md-6">
+          <label for="id_prenom" class="form-label fw-semibold">Prénom</label>
+          {{ form.prenom|add_class:"form-control" }}
+        </div>
+
+        <div class="col-md-6">
+          <label for="id_sexe" class="form-label fw-semibold">Sexe</label>
+          {{ form.sexe|add_class:"form-select" }}
+        </div>
+
+        <div class="col-md-6">
+          <label for="id_telephone" class="form-label fw-semibold">Téléphone</label>
+          {{ form.telephone|add_class:"form-control" }}
+        </div>
+
+        <div class="col-md-6">
+          <label for="id_email" class="form-label fw-semibold">Email</label>
+          {{ form.email|add_class:"form-control" }}
+        </div>
+
+        <div class="col-md-6">
+          <label for="id_profession" class="form-label fw-semibold">Profession</label>
+          {{ form.profession|add_class:"form-control" }}
+        </div>
+
+        <div class="col-md-6">
+          <label for="id_date_naissance" class="form-label fw-semibold">Date de naissance</label>
+          {{ form.date_naissance|add_class:"form-control" }}
+        </div>
+
+        <div class="col-md-6">
+          <label for="id_lieu_nais" class="form-label fw-semibold">Lieu de naissance</label>
+          {{ form.lieu_nais|add_class:"form-control" }}
+        </div>
+
+        <div class="col-md-6">
+          <label for="id_pays" class="form-label fw-semibold">Pays d'origine</label>
+          {{ form.pays|add_class:"form-control" }}
+        </div>
+
+        <div class="col-md-6">
+          <label for="id_ville" class="form-label fw-semibold">Ville actuelle</label>
+          {{ form.ville|add_class:"form-control" }}
+        </div>
+
+        <div class="col-md-6">
+          <label for="id_status" class="form-label fw-semibold">Statut du compte</label>
+          {{ form.status|add_class:"form-select" }}
+        </div>
+
+        <div class="col-12">
+          <label for="id_biographie" class="form-label fw-semibold">Biographie</label>
+          {{ form.biographie|add_class:"form-control" }}
+        </div>
+
+        <div class="col-12">
+          <label for="id_image_profil" class="form-label fw-semibold">Image de profil</label>
+          {{ form.image_profil|add_class:"form-control" }}
+        </div>
+      </div>
+
+      <div class="text-end mt-4">
+        <button type="submit" class="btn btn-outline-success px-4 shadow rounded-pill fw-bold">
+          💾 Modifier mes infos
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Section amis AJAX -->
+  <div id="amisSection" style="display: none;" class="card shadow-sm p-4 mb-4"></div>
+
+
+
+
+
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  // Toggle générique de section
+  window.toggleSection = function (sectionId) {
+    const sections = ['myBlogsSection', 'blogFormSection', 'videoFormSection', 'editSection', 'amisSection'];
+    sections.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = (id === sectionId) ? (el.style.display === "block" ? "none" : "block") : "none";
+    });
+
+    // Si c’est la section amis, charger les amis AJAX si vide
+    if (sectionId === 'amisSection') {
+      const section = document.getElementById('amisSection');
+      if (section && section.innerHTML.trim() === "") {
+        fetch("{% url 'mes_amis' %}", { headers: { "X-Requested-With": "XMLHttpRequest" } })
+          .then(res => res.text())
+          .then(html => {
+            section.innerHTML = html;
+            section.style.display = "block";
+            section.scrollIntoView({ behavior: 'smooth' });
+          });
+      }
+    }
+  };
+
+  // Toggle spécifique pour éditer le profil
+  window.toggleEditForm = function () {
+    const section = document.getElementById("editSection");
+    if (section) {
+      const isHidden = window.getComputedStyle(section).display === "none";
+      section.style.display = isHidden ? "block" : "none";
+      if (isHidden) section.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  // Toggle formulaire blog
+  window.toggleBlogForm = function () {
+    const section = document.getElementById("blogFormSection");
+    if (section) {
+      section.style.display = section.style.display === "none" ? "block" : "none";
+      section.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  // Voir mes blogs
+  window.toggleMyBlogs = function () {
+    const section = document.getElementById("myBlogsSection");
+    if (section) {
+      section.style.display = section.style.display === "none" ? "block" : "none";
+      section.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  // Form modification blog
+  window.toggleForm = function (blogId) {
+    const form = document.getElementById("editBlogForm" + blogId);
+    if (form) {
+      form.style.display = (form.style.display === "none" || form.style.display === "") ? "block" : "none";
+    }
+  };
+
+  // Preview vidéo
+  window.previewVideo = function (event) {
+    const file = event.target.files[0];
+    const previewContainer = document.getElementById('video-preview');
+    const player = document.getElementById('preview-player');
+
+    if (file && file.type.startsWith('video')) {
+      const url = URL.createObjectURL(file);
+      player.src = url;
+      previewContainer.style.display = 'block';
+    } else {
+      previewContainer.style.display = 'none';
+      player.src = '';
+    }
+  };
+
+  // Message AJAX
+  function showMessage(content, type = 'success') {
+    const box = document.getElementById('ajax-message');
+    if (!box) return;
+    box.innerHTML = `<div class="alert alert-${type} shadow">${content}</div>`;
+    box.style.display = 'block';
+    setTimeout(() => box.style.display = 'none', 4000);
+  }
+
+  // Modifier profil AJAX
+  const profilForm = document.querySelector('#editSection form');
+  if (profilForm) {
+    profilForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const formData = new FormData(profilForm);
+
+      fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            showMessage('👤 Profil mis à jour.');
+            setTimeout(() => window.location.reload(), 1500);
+          } else {
+            showMessage(data.errors || 'Erreur modification profil.', 'danger');
+          }
+        })
+        .catch(() => showMessage('Erreur réseau. Veuillez réessayer.', 'danger'));
+    });
+  }
+
+  // Pagination AJAX amis
+  document.addEventListener("click", function (event) {
+    const amisLink = event.target.closest("#amisSection .pagination a");
+    if (amisLink) {
+      event.preventDefault();
+      fetch(amisLink.href, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+        .then(res => res.text())
+        .then(html => {
+          document.getElementById("amisSection").innerHTML = html;
+        });
+    }
+  });
+
+  // Pagination AJAX invitations
+  document.addEventListener("click", function (event) {
+    const invitationLink = event.target.closest("#invitationsContainer .pagination a");
+    if (invitationLink) {
+      event.preventDefault();
+      fetch(invitationLink.href, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+        .then(response => response.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const newDoc = parser.parseFromString(html, "text/html");
+          const newInvitations = newDoc.querySelector("#invitationsContainer");
+          if (newInvitations) {
+            document.getElementById("invitationsContainer").innerHTML = newInvitations.innerHTML;
+            const anchor = document.getElementById("anchor-invitations");
+            if (anchor) {
+              setTimeout(() => {
+                anchor.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 100);
+            }
+          }
+        });
+    }
+  });
+
+  // Fonction pour recharger la liste d'amis (AJAX)
+  function chargerAmisAJAX() {
+    const section = document.getElementById("amisSection");
+    if (section) {
+      fetch("{% url 'mes_amis' %}", {
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+      })
+        .then(res => res.text())
+        .then(html => {
+          section.innerHTML = html;
+        });
+    }
+  }
+
+  // Accepter ou refuser une invitation
+  window.gererInvitation = function (id, action) {
+    const url = action === 'accepter'
+      ? `/invitation-accepter/${id}/`
+      : `/invitation-refuser/${id}/`;
+
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'ok') {
+          const card = document.getElementById(`invitation-${id}`);
+          if (card) card.remove();
+
+          if (action === 'accepter') {
+            chargerAmisAJAX();  // Recharge la section amis automatiquement
+          }
+        } else {
+          alert("Erreur : " + data.message);
+        }
+      })
+      .catch(() => alert("Erreur réseau."));
+  };
+
+});
+</script>
+
+
+<script>
+  const images = [
+    {% for img in all_images_profil %}
+    {
+      url: "{{ img.image.url }}",
+      date: "{{ img.date_ajout|date:'d M Y H:i' }}"
+    },
+    {% endfor %}
+  ];
+
+  let currentIndex = 0;
+
+  function changeImage(direction) {
+    if (!images.length) return;
+    currentIndex = (currentIndex + direction + images.length) % images.length;
+    document.getElementById("carouselImage").src = images[currentIndex].url;
+    document.getElementById("imageDate").textContent = images[currentIndex].date;
+  }
+
+  function zoomImage(src) {
+    const modal = document.createElement("div");
+    modal.style.position = "fixed";
+    modal.style.top = "0";
+    modal.style.left = "0";
+    modal.style.width = "100%";
+    modal.style.height = "100%";
+    modal.style.backgroundColor = "rgba(0,0,0,0.9)";
+    modal.style.zIndex = "9999";
+    modal.style.display = "flex";
+    modal.style.alignItems = "center";
+    modal.style.justifyContent = "center";
+    modal.innerHTML = `
+      <img src="${src}" style="max-width: 90%; max-height: 90%; border-radius: 10px;">
+      <span style="position: absolute; top: 20px; right: 30px; font-size: 40px; color: white; cursor: pointer;">&times;</span>
+    `;
+    modal.querySelector("span").onclick = () => document.body.removeChild(modal);
+    document.body.appendChild(modal);
+  }
+
+
+</script>
+
+
+
+
+
+
+{% endblock %}

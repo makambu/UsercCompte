@@ -1,0 +1,174 @@
+{% extends 'head/home.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+  .chat-container {
+    display: flex;
+    height: 85vh;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+  }
+
+  .chat-sidebar {
+    width: 280px;
+    background-color: #f8f9fa;
+    border-right: 1px solid #dee2e6;
+    padding: 1rem;
+    overflow-y: auto;
+  }
+
+  .chat-sidebar h6 {
+    font-weight: bold;
+    margin-bottom: 1rem;
+  }
+
+  .chat-history-item {
+    padding: 0.5rem;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    background-color: #ffffff;
+    cursor: pointer;
+  }
+
+  .chat-history-item:hover {
+    background-color: #e2e6ea;
+  }
+
+  .chat-main {
+    flex: 1;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chat-messages {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+  }
+
+  .chat-input {
+    padding: 1rem;
+    border-top: 1px solid #dee2e6;
+    background-color: #f1f3f5;
+  }
+
+  .chat-input form {
+    display: flex;
+    gap: 10px;
+  }
+
+  .chat-input input {
+    flex: 1;
+    padding: 0.7rem;
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+  }
+
+  .chat-input button {
+    padding: 0.7rem 1rem;
+    border: none;
+    background-color: var(--bs-primary);
+    color: white;
+    border-radius: 8px;
+  }
+
+  .message {
+    margin-bottom: 1rem;
+  }
+
+  .message.user {
+    text-align: right;
+  }
+
+  .message.assistant {
+    text-align: left;
+  }
+
+  .message .content {
+    display: inline-block;
+    padding: 0.7rem 1rem;
+    border-radius: 10px;
+    max-width: 80%;
+  }
+
+  .message.user .content {
+    background-color: var(--bs-primary);
+    color: white;
+  }
+
+  .message.assistant .content {
+    background-color: #e9ecef;
+  }
+</style>
+
+<div class="container mt-5 mb-2 py-4">
+  <!-- Message d'information -->
+  <div class="alert alert-info text-center mb-3">
+    🤖 La discussion avec l’IA CgmBot est temporairement désactivée. Fonctionnalité en cours d’activation.
+  </div>
+
+  <div class="chat-container">
+    <div class="chat-sidebar">
+      <h6><i class="bi bi-chat-dots me-1"></i>Historique</h6>
+      <div id="chat-history"></div>
+    </div>
+
+    <div class="chat-main">
+      <div id="chat-messages" class="chat-messages"></div>
+      <div class="chat-input">
+        <form id="chat-form">
+          <input type="text" id="userInput" placeholder="Posez votre question..." required>
+          <button type="submit"><i class="bi bi-send"></i></button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const form = document.getElementById("chat-form");
+  const input = document.getElementById("userInput");
+  const chatMessages = document.getElementById("chat-messages");
+  const chatHistory = document.getElementById("chat-history");
+
+  const history = [];
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const userMessage = input.value.trim();
+    if (!userMessage) return;
+
+    appendMessage("user", userMessage);
+    input.value = "";
+
+    // ❌ Ne pas appeler l’API — afficher un message statique
+    appendMessage("assistant", "💡 La fonctionnalité IA est temporairement désactivée. Veuillez patienter...");
+  });
+
+  function appendMessage(role, text) {
+    const div = document.createElement("div");
+    div.classList.add("message", role);
+    div.innerHTML = `<div class="content">${text}</div>`;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    history.push({ role, text });
+  }
+
+  window.addEventListener("DOMContentLoaded", () => {
+    fetch("{% url 'chatbot_historique' %}")
+      .then(res => res.json())
+      .then(data => {
+        if (data.messages) {
+          data.messages.reverse().forEach(msg => {
+            if (msg.question) appendMessage("user", msg.question);
+            if (msg.reponse) appendMessage("assistant", msg.reponse);
+          });
+        }
+      });
+  });
+</script>
+
+{% endblock %}

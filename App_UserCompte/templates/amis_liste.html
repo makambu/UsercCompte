@@ -1,0 +1,85 @@
+{% load static %}
+
+<!-- INVITATIONS REÇUES -->
+<h5 class="text-warning mt-0 mb-2">
+  <i class="fas fa-envelope me-2"></i> Invitations reçues | Totales : 
+  <span class="badge bg-warning text-light">{{ total_invitations }}</span>
+</h5>
+<div id="anchor-invitations" style="padding-top: 70px; margin-top: -70px;"></div>
+<div id="invitationsContainer">
+  {% if invitations_recues %}
+  {% for inv in invitations_recues %}
+  <div class="d-flex align-items-center justify-content-between border-bottom py-2" id="invitation-{{ inv.id }}">
+    <div class="d-flex align-items-center">
+      {% if inv.emetteur.image_profil %}
+      <img src="{{ inv.emetteur.image_profil.url }}" class="rounded-circle me-2" width="40" height="40"
+        style="object-fit: fill;">
+      {% else %}
+      <img src="{% static 'images/image_4.png' %}" class="rounded-circle me-2" width="40" height="40"
+        style="object-fit: fill;">
+      {% endif %}
+      <strong>{{ inv.emetteur.nom }} {{ inv.emetteur.prenom }}</strong>
+    </div>
+    <div>
+      <button onclick="gererInvitation({{ inv.id }}, 'accepter')" class="btn btn-success btn-sm me-1">Accepter</button>
+      <button onclick="gererInvitation({{ inv.id }}, 'refuser')" class="btn btn-danger btn-sm">Refuser</button>
+    </div>
+  </div>
+  {% endfor %}
+
+  <!-- Pagination invitations -->
+  <div class="d-flex justify-content-center mt-2 pagination">
+    {% if invitations_recues.has_previous %}
+    <a href="{% url 'mes_amis' %}?page_inv={{ invitations_recues.previous_page_number }}"
+      class="btn btn-outline-primary me-2">Précédent</a>
+    {% endif %}
+    {% if invitations_recues.has_next %}
+    <a href="{% url 'mes_amis' %}?page_inv={{ invitations_recues.next_page_number }}"
+      class="btn btn-outline-primary">Suivant</a>
+    {% endif %}
+  </div>
+
+  {% else %}
+  <p class="text-muted mt-3">Aucune invitation en attente.</p>
+  {% endif %}
+</div>
+<hr style="border-color: rgb(121, 119, 119);">
+
+
+<!-- LISTE DES AMIS -->
+<h5 class="text-success mt-4 mb-2">
+  <i class="fas fa-users me-2"></i> Mes ami(e)s | Totale :
+  <span class="badge bg-success">{{ total_amis }}</span>
+</h5>
+{% if amis %}
+  {% for ami in amis %}
+    <div class="d-flex align-items-center justify-content-between border-bottom py-2">
+      <div class="d-flex align-items-center">
+        {% if ami.image_profil %}
+          <img src="{{ ami.image_profil.url }}" class="rounded-circle me-2" width="40" height="40" style="object-fit: fill;">
+        {% else %}
+          <img src="{% static 'images/image_4.png' %}" class="rounded-circle me-2" width="40" height="40" style="object-fit: fill;">
+        {% endif %}
+        <strong>{{ ami.nom }} {{ ami.prenom }}</strong>
+      </div>
+      <div>
+        <a href="{% url 'voir_profil' ami.id %}" class="btn btn-outline-secondary btn-sm">Profil</a>
+        <a href="{% url 'chat_user' ami.id %}" class="btn btn-outline-success btn-sm">
+          <i class="fas fa-comments me-1"></i> Solola
+        </a>
+      </div>
+    </div>
+  {% endfor %}
+
+  <!-- PAGINATION -->
+  <div class="d-flex justify-content-center mt-1 pagination">
+    {% if amis.has_previous %}
+      <a href="{% url 'mes_amis' %}?page_amis={{ amis.previous_page_number }}" class="btn btn-outline-primary w-50 me-1">Précédent</a>
+    {% endif %}
+    {% if amis.has_next %}
+      <a href="{% url 'mes_amis' %}?page_amis={{ amis.next_page_number }}" class="btn btn-outline-primary w-50 me-1">Suivant</a>
+    {% endif %}
+  </div>
+{% else %}
+  <p class="text-muted">Vous n’avez pas encore d’ami(e)s.</p>
+{% endif %}

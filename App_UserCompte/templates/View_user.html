@@ -1,0 +1,785 @@
+{% extends 'head/home.html' %}
+{% load static %}
+
+{% block content %}
+
+<style>
+    .profil-img {
+        width: 100%;
+        height: 250px;
+        object-fit: fill;
+        border-radius: 29px;
+    }
+
+    .status-floating {
+        position: absolute;
+        top: 15px;
+        right: 20px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255, 255, 255, 0.85);
+        padding: 5px 10px;
+        border-radius: 20px;
+        z-index: 10;
+        font-size: 13px;
+        font-weight: bold;
+    }
+
+    .status-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: #28a745;
+        animation: blink 1.2s infinite;
+    }
+
+    .status-offline {
+        background-color: gray;
+        animation: none;
+    }
+
+    @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+    }
+</style>
+
+<!-- Carousel Bootstrap -->
+<div id="messageSlider" class="carousel slide mt-4" data-bs-ride="carousel">
+    <div class="carousel-inner">
+        <div class="carousel-item active">
+            <img src="{% static 'images/Ima_3.jpg' %}" class="d-block"
+                style="height: 300px; width: 100%; object-fit: fill; object-position: top; overflow: hidden; display: flex;">
+            <div class="carousel-caption">
+                <h5 style="font-weight: bold; font-size: 30px;">Naviguer sans limite !!!</h5>
+                <p class="fw-bold">Connectez-vous pour gérer votre compte utilisateur et découvrir les profils des autres.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-3 mb-5">
+
+    <!-- Carte profil -->
+    <div class="card shadow overflow-hidden position-relative" style="border-radius: 20px;">
+
+        <!-- Statut en haut à droite de la carte -->
+        {% now "U" as now %}
+        <div class="status-floating">
+            {% if user_profil.derniere_connexion %}
+                {% if user_profil.is_online %}
+                    <span class="status-indicator"></span>
+                    <span class="text-success">En ligne</span>
+                {% else %}
+                    <span class="status-indicator status-offline"></span>
+                    <span class="text-muted">Hors ligne</span>
+                {% endif %}
+            {% else %}
+                <span class="status-indicator status-offline"></span>
+                <span class="text-muted">Jamais connecté</span>
+            {% endif %}
+        </div>
+
+        <!-- Image de profil -->
+        <!-- Carrousel Image Profil (Vue utilisateur) -->
+        <div class="text-center mb-4 mt-4">
+            <div class="position-relative" style="max-width: 300px; margin: auto;">
+                {% if all_images_profil %}
+                <img id="carouselImage" src="{{ all_images_profil.0.image.url }}" class="rounded-circle mx-auto d-block"
+                    onclick="zoomImage(this.src)"
+                    style="width: 100%; aspect-ratio: 1/1; object-fit: fill;" />
+
+                <!-- Navigation -->
+                <button onclick="changeImage(-1)"
+                    class="btn btn-sm btn-light position-absolute top-50 start-0 translate-middle-y" style="border-radius: 50%;">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button onclick="changeImage(1)" class="btn btn-sm btn-light position-absolute top-50 end-0 translate-middle-y"
+                    style="border-radius: 50%;">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+
+                <!-- Date -->
+                <div id="imageDate" class="text-muted mt-2" style="font-size: 14px;">
+                    {{ all_images_profil.0.date_ajout|date:"d M Y H:i" }}
+                </div>
+                {% else %}
+                <img src="{% static 'images/image_4.png' %}" class="rounded-circle mx-auto d-block"
+                    style="width: 100%; aspect-ratio: 1/1; object-fit: fill;" />
+                {% endif %}
+            </div>
+        </div>
+
+
+        <!-- Données du profil -->
+        <div class="p-4">
+            <div class="text-center">
+                <h3 class="fw-bold">
+                    {{ user_profil.nom|default_if_none:""|default:"" }}
+                    {{ user_profil.post_nom|default_if_none:""|default:"" }}
+                    {{ user_profil.prenom|default_if_none:""|default:"" }}
+                </h3>
+                <p class="text-muted mb-2">
+                    {{ user_profil.profession|default_if_none:"Profession non renseignée"|default:"Profession non renseignée" }}
+                </p>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="row">
+                <div class="col-md-6 mb-2"><strong>Sexe :</strong> {{ user_profil.get_sexe_display|default:" -" }}</div>
+                <div class="col-md-6 mb-2"><strong>Téléphone :</strong> {{ user_profil.telephone|default_if_none:"-"|default:" -" }}</div>
+                <div class="col-md-6 mb-2"><strong>Date de naissance :</strong> {{ user_profil.date_naissance|default_if_none:"-"|default:" -" }}</div>
+                <div class="col-md-6 mb-2"><strong>Lieu de naissance :</strong> {{ user_profil.lieu_nais|default_if_none:"-"|default:" -" }}</div>
+                <div class="col-md-6 mb-2"><strong>Ville actuelle :</strong> {{ user_profil.ville|default_if_none:"-"|default:" -"}}</div>
+                <div class="col-md-6 mb-2"><strong>Pays d'origine :</strong> {{ user_profil.pays|default_if_none:"-"|default:" -"}}</div>
+                <div class="col-md-6 mb-2"><strong>Dernière connexion :</strong> {{ user_profil.derniere_connexion|date:"d/m/Y à H:i"|default_if_none:"Jamais connecté"|default:" Jamais connecté" }}</div>
+            </div>
+
+            <div class="col-12 mt-1">
+                <strong>Biographie :</strong>
+                <div class="bg-light rounded p-3 mt-2" style="white-space: pre-line;">
+                    {{ user_profil.biographie|default_if_none:"Aucune biographie fournie."|default:"Aucune biographie fournie." }}
+                </div>
+            </div>
+
+            <!-- Bouton J’aime -->
+            <div class="row justify-content-center mt-4">
+                <div class="col-12 text-center mb-3">
+                    <button id="like-btn" class="btn btn-outline-danger px-4 py-2 shadow-sm" style="border-radius: 50px;"
+                        data-user-id="{{ user_profil.id }}">
+                        <i class="fa fa-heart me-1"></i> J’aime ce compte
+                    </button>
+            
+                    <div id="like-count" class="text-muted mt-2">
+                        <i class="fa fa-users text-danger"></i> {{ total_likes }} j'aime
+                    </div>
+                </div>
+            
+                <!-- Bouton d'ajout d'ami -->
+                <div class="col-md-4 mb-2 text-center" id="friend-action">
+                    <!-- Le bouton sera mis à jour par AJAX -->
+                    {% csrf_token %}
+                    {% if utilisateur_connecte != user_profil %}
+                    {% if est_ami %}
+                    <a href="{% url 'chat_user' user_profil.id %}" class="btn btn-outline-success w-100 mb-2 shadow"
+                        style="border-radius: 25px;">
+                        <i class="fas fa-comments me-1"></i> Solola naye
+                    </a>
+                    
+                    {% elif invitation_envoyee %}
+                    <button onclick="annulerInvitation({{ user_profil.id }})" class="btn btn-outline-warning w-100 mb-2 shadow"
+                        style="border-radius: 25px;">
+                        Annuler invitation
+                    </button>
+                    {% else %}
+                    <button onclick="envoyerInvitation({{ user_profil.id }})" class="btn btn-outline-primary w-100 mb-2 shadow"
+                        style="border-radius: 25px;">
+                        <i class="fas fa-user-plus me-1"></i> Ajouter ami(e)
+                    </button>
+                    {% endif %}
+                    {% endif %}
+                </div>
+
+
+                <div class="col-md-4 mb-2 text-center">
+                    <a href="javascript:void(0);" onclick="toggleSection('userBlogsSection')"
+                    class="btn btn-outline-dark w-100 shadow" style="border-radius: 25px;">
+                        <i class="bi bi-journal-text me-1"></i> Voir ses blogs publiés
+                    </a>
+                </div>
+                <div class="col-md-4 mb-2 text-center">
+                    <a href="javascript:void(0);" onclick="toggleSection('userVideosSection')" 
+                    class="btn btn-outline-warning w-100 shadow" style="border-radius: 25px;">
+                        <i class="bi bi-camera-reels me-1"></i> Voir ses vidéos publiées
+                    </a>
+                </div>
+                <!-- Voir ses amis -->
+                <div class="col-md-4 text-center">
+                    <button onclick="voirAmisUtilisateur({{ user_profil.id }})" class="btn btn-outline-dark w-100 shadow mt-3"
+                    style="border-radius: 25px;">
+                        <i class="fas fa-users me-1"></i> Voir ses ami(e)s
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    
+    <!-- Section des blogs de l'utilisateur (masquée par défaut) -->
+<div id="userBlogsSection" style="display: none;" class="mt-4">
+    <h4 class="text-center mb-4">Blogs publiés par {{ user_profil.nom }}</h4>
+
+    {% if user_blogs %}
+    {% for blog in user_blogs %}
+    <div class="card mb-3 shadow">
+        <div class="row g-0">
+            {% if blog.image %}
+            <div class="col-md-4">
+                <img src="{{ blog.image.url }}" class="img-fluid rounded-start" alt="{{ blog.titre }}">
+            </div>
+            {% endif %}
+            <div class="col-md-8">
+                <div class="card-body">
+                    <h5 class="card-title">{{ blog.titre }}</h5>
+                    <p class="card-text">{{ blog.contenu|truncatewords:500 }}</p>
+                    <p class="card-text">
+                        <small class="text-muted">Publié le {{ blog.date_creation|date:"d M Y" }}</small>
+                    </p>
+
+                    <!-- Likes et commentaires -->
+                    <div class="d-flex justify-content-between align-items-center">
+                        <button class="btn btn-sm btn-outline-danger btn-like-blog" data-blog-id="{{ blog.id }}">
+                            {% if utilisateur_connecte in blog.likes.all %}
+                            ❤️
+                            {% else %}
+                            🤍
+                            {% endif %}
+                            <span id="like-count-{{ blog.id }}">{{ blog.likes.count }}</span>
+                        </button>
+
+                        <button class="btn btn-sm btn-outline-primary" onclick="toggleBlogDetails('{{ blog.id }}')">
+                            Lire & Commenter <i class="fa fa-comment" aria-hidden="true"></i>
+                        </button>
+                        {% if utilisateur_connecte in blog.likes.all %}
+                        <small class="text-success fs-5">Vous avez aimé ce blog</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="blogDetails-{{ blog.id }}" style="display: none;" class="mt-1">
+        <!-- Commentaires -->
+        <h6>Commentaires :</h6>
+        <div class="commentaires-zone" style="max-height: 100px; overflow-y: auto;">
+            {% for commentaire in blog.commentaires.all %}
+            <div class="border rounded p-1 mb-1 bg-light">
+                <p class="mb-0"><strong>{{ commentaire.auteur.nom }}</strong> <small class="text-muted">{{ commentaire.date_commentaire|date:"d/m/Y à H:i" }}</small></p>
+                <p class="mb-0">{{ commentaire.contenu }}</p>
+            </div>
+            {% empty %}
+            <p class="text-muted">Aucun commentaire pour ce blog.</p>
+            {% endfor %}
+        </div>
+    
+        <!-- Formulaire de commentaire -->
+        <form method="post" action="{% url 'ajouter_commentaire' blog.id %}" class="ajax-form"
+            data-callback="ajouterCommentaireCallback">
+            {% csrf_token %}
+            <div class="mb-1">
+                <textarea name="contenu" rows="2" class="form-control" placeholder="Ajouter un commentaire..."
+                    required></textarea>
+            </div>
+            <button type="submit" class="btn btn-sm btn-outline-primary w-50 mb-2"
+            style="border-radius: 20px;">
+                <i class="fa fa-comment" aria-hidden="true"></i> Commenter
+            </button>
+        </form>
+    
+    </div>
+
+
+    {% endfor %}
+    {% else %}
+    <div class="alert alert-warning text-center">Cet utilisateur n’a publié aucun blog pour l’instant.</div>
+    {% endif %}
+</div>
+
+<!-- Section de voir les vidéos de l'user -->
+<div id="userVideosSection" style="display: none;" class="mt-4">
+    <h5 class="fw-bold text-primary mb-2"><i class="fas fa-video me-2"></i>Vidéos publiées par {{ user_profil.nom }}</h5>
+    {% if user_videos %}
+    <div class="row">
+        {% for video in user_videos %}
+        <div class="col-md-6">
+            <div class="card shadow-sm p-3">
+                <!-- Titre -->
+                <h6 class="fw-bold text-dark">{{ video.titre }}</h6>
+
+                <!-- Description -->
+                <div class="mb-2 px-2 py-1 bg-light rounded" style="max-height: 60px; overflow-y: auto;">
+                    <small class="text-muted">{{ video.description }}</small>
+                </div>
+
+                <!-- Vidéo -->
+                <video controls class="video-player w-100 rounded shadow-sm mb-2" style="max-height: 220px;">
+                    <source src="{{ video.fichier_video.url }}" type="video/mp4">
+                    Votre navigateur ne supporte pas la lecture vidéo.
+                </video>
+
+                <!-- Date publication -->
+                <small class="text-muted d-block">Publié le {{ video.date_creation|date:"d/m/Y H:i" }}</small>
+
+                <!-- Actions -->
+                <div class="d-flex justify-content-between align-items-center my-2">
+                    <form method="post" action="{% url 'liker_video' video.id %}" class="form-like-video">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                            ❤️ {{ video.likes.count }}
+                        </button>
+                    </form>
+                    <a href="{{ video.fichier_video.url }}" download class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-download"></i> Télécharger
+                    </a>
+                </div>
+
+                <!-- Commentaires -->
+                <div class="bloc-commentaire-video pt-2">
+                    <h6 class="text-secondary fw-bold mb-2">
+                        <i class="fas fa-comment-dots me-1"></i> Commentaires
+                    </h6>
+                    <div class="zone-commentaire-video mb-2 pe-2" style="max-height: 80px; overflow-y: auto;">
+                        {% for commentaire in video.commentaires.all %}
+                        <div class="mb-2 d-flex align-items-start">
+                            {% if commentaire.user.image_profil %}
+                            <img src="{{ commentaire.user.image_profil.url }}" class="rounded-circle me-2" width="32"
+                                height="32" style="object-fit: fill;" alt="profil">
+                            {% else %}
+                            <img src="{% static 'images/image_4.png' %}" class="rounded-circle me-2" width="32"
+                                height="32" style="object-fit: fill;" alt="profil par défaut">
+                            {% endif %}
+                            <div>
+                                <strong class="text-capitalize">
+                                    <a href="{% url 'voir_profil' commentaire.user.id %}"
+                                        class="text-dark text-decoration-none">
+                                        {{ commentaire.user.nom }}
+                                    </a>
+                                </strong>
+                                <span class="text-muted">: {{ commentaire.texte }}</span><br>
+                                <small class="text-muted">{{ commentaire.date_creation|date:"d/m/Y H:i" }}</small>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted small">Aucun commentaire.</p>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Ajouter un commentaire -->
+                    {% if utilisateur_connecte %}
+                    <form method="post" action="{% url 'commenter_video' video.id %}" class="form-comment-video">
+                        {% csrf_token %}
+                        <div class="input-group">
+                            <input type="text" name="texte" class="form-control form-control-sm" placeholder="Ajouter un commentaire..."
+                                required>
+                            <button type="submit" class="btn btn-sm btn-outline-success">Commenter</button>
+                        </div>
+                    </form>
+                    {% else %}
+                    <p class="text-muted small">Connectez-vous pour commenter.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted">Cet utilisateur n'a encore publié aucune vidéo.</p>
+    {% endif %}
+</div>
+
+<!-- SECTION amis AJAX -->
+<div id="amisUtilisateurSection" class="card mt-3 p-3 shadow-sm" style="display: none;">
+  <div id="amisUtilisateurContent"></div>
+</div>
+
+
+
+</div>
+
+<script>
+    function toggleUserBlogs() {
+        const section = document.getElementById("userBlogsSection");
+        const button = document.getElementById("toggleBlogBtn");
+        const isHidden = section.style.display === "none" || section.style.display === "";
+
+        section.style.display = isHidden ? "block" : "none";
+        button.innerText = isHidden ? "Fermer les blogs" : "Voir ses blogs publiés";
+
+        if (isHidden) {
+            section.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+    }
+</script>
+
+<script>
+    function toggleBlogDetails(blogId) {
+        const detailSection = document.getElementById(`blogDetails-${blogId}`);
+        if (detailSection.style.display === "none" || detailSection.style.display === "") {
+            detailSection.style.display = "block";
+        } else {
+            detailSection.style.display = "none";
+        }
+    }
+</script>
+
+<script>
+  function toggleUserVideos() {
+    const section = document.getElementById("userVideosSection");
+    const btn = document.getElementById("toggleVideoBtn");
+
+    if (section.style.display === "none") {
+      section.style.display = "block";
+      btn.innerText = "Masquer les vidéos publiées";
+    } else {
+      section.style.display = "none";
+      btn.innerText = "Voir ses vidéos publiées";
+    }
+  }
+</script>
+
+<script>
+    function toggleSection(sectionId) {
+        const sections = ['userBlogsSection', 'userVideosSection'];
+
+        sections.forEach(id => {
+            const section = document.getElementById(id);
+            if (!section) return;
+
+            if (id === sectionId) {
+                // Toggle uniquement la section ciblée
+                const currentlyVisible = section.style.display === "block";
+                section.style.display = currentlyVisible ? "none" : "block";
+            } else {
+                // Cacher les autres sections
+                section.style.display = "none";
+            }
+        });
+    }
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const videos = document.querySelectorAll('.video-player');
+
+        videos.forEach(video => {
+            video.addEventListener('play', function () {
+                videos.forEach(otherVideo => {
+                    if (otherVideo !== video && !otherVideo.paused) {
+                        otherVideo.pause();
+                    }
+                });
+            });
+        });
+    });
+</script>
+
+
+<!-- ajax pour n'est pas charger la page au momen de jaime le compte-->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const likeBtn = document.getElementById("like-btn");
+
+        likeBtn.addEventListener("click", function () {
+            const userId = this.dataset.userId;
+
+            fetch(`/aimer_profil/${userId}/`, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}",
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.liked !== undefined) {
+                        // Changer l'état du bouton
+                        likeBtn.innerHTML = data.liked ? '<i class="fa fa-heart me-1"></i> Retirer le j’aime' : '<i class="fa fa-heart me-1"></i> J’aime ce compte';
+
+                        // Mettre à jour le compteur
+                        document.getElementById("like-count").innerHTML = `
+                    <i class="fa fa-users text-danger"></i> ${data.nb_likes} j'aime
+                `;
+                    }
+                });
+        });
+    });
+</script>
+
+<!-- Ajax pour aimer blogs -->
+<script>
+    document.querySelectorAll('.btn-like-blog').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const blogId = this.dataset.blogId;
+
+            fetch(`/aimer_blog/${blogId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    const countSpan = document.getElementById(`like-count-${blogId}`);
+                    if (countSpan && data.nb_likes !== undefined) {
+                        countSpan.textContent = data.nb_likes;
+                        btn.innerHTML = (data.liked ? '❤️' : '🤍') + ` <span id="like-count-${blogId}">${data.nb_likes}</span> J’aime`;
+                    }
+                })
+                .catch(err => console.error(err));
+        });
+    });
+</script>
+
+<!-- Ajax pour commenter les blogs -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('form.ajax-form').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const url = form.action;
+            const data = new FormData(form);
+            const csrfToken = form.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: data
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.auteur_nom && data.texte) {
+                    const zone = form.closest('.mt-1').querySelector('.commentaires-zone');
+                    const nouveau = document.createElement('div');
+                    nouveau.className = 'border rounded p-1 mb-1 bg-light';
+                    nouveau.innerHTML = `
+                        <p class="mb-0"><strong>${data.auteur_nom}</strong> <small class="text-muted">${data.date}</small></p>
+                        <p class="mb-0">${data.texte}</p>
+                    `;
+                    zone.prepend(nouveau);
+                    form.reset();
+                }
+            })
+            .catch(err => {
+                console.error('Erreur commentaire AJAX:', err);
+            });
+        });
+    });
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Liker une vidéo
+    document.querySelectorAll('.form-like-video').forEach(form => {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const url = form.action;
+            const csrf = form.querySelector('[name=csrfmiddlewaretoken]').value;
+            const btn = form.querySelector('button');
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrf,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.liked !== undefined && data.nb_likes !== undefined) {
+                    btn.innerHTML = `${data.liked ? '❤️' : '🤍'} ${data.nb_likes}`;
+                }
+            })
+            .catch(err => console.error('Erreur like vidéo:', err));
+        });
+    });
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const forms = document.querySelectorAll('form.form-comment-video');
+    console.log('Nombre de formulaires trouvés :', forms.length);  // ← Vérifie que c’est bien trouvé
+
+    forms.forEach(form => {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const url = form.action;
+            const csrf = form.querySelector('[name="csrfmiddlewaretoken"]').value;
+            const bloc = form.closest('.bloc-commentaire-video');
+            const container = bloc.querySelector('.zone-commentaire-video');
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrf,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: new FormData(form)
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log('Données reçues :', data);  // ← Pour voir si tout va bien
+                if (data.texte && data.auteur_nom && container) {
+                    const commentaire = document.createElement('div');
+                    commentaire.className = 'mb-2 d-flex align-items-start';
+                    commentaire.innerHTML = `
+                        <img src="${data.image_url || '/static/images/image_4.png'}"
+                             class="rounded-circle me-2" width="32" height="32" style="object-fit: fill;" alt="profil">
+                        <div>
+                            <strong class="text-capitalize">
+                                <a href="${data.profil_url}" class="text-dark text-decoration-none">${data.auteur_nom}</a>
+                            </strong>
+                            <span class="text-muted">: ${data.texte}</span><br>
+                            <small class="text-muted">${data.date}</small>
+                        </div>
+                    `;
+                    container.prepend(commentaire);
+                    form.reset();
+                }
+            })
+            .catch(err => {
+                console.error('Erreur AJAX commentaire vidéo:', err);
+            });
+        });
+    });
+});
+</script>
+
+
+<script>
+function envoyerInvitation(profilId) {
+  fetch(`/ajouter-ami/${profilId}/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': '{{ csrf_token }}',
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      document.getElementById("friend-action").innerHTML = `
+        <button onclick="annulerInvitation(${profilId})" class="btn btn-warning w-100 mb-2"
+        style="border-radius: 25px;">
+          Annuler invitation
+        </button>`;
+    } else {
+      alert(data.message || "Erreur lors de l'envoi");
+    }
+  });
+}
+
+function annulerInvitation(profilId) {
+  fetch(`/annuler-invitation/${profilId}/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': '{{ csrf_token }}',
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      document.getElementById("friend-action").innerHTML = `
+        <button onclick="envoyerInvitation(${profilId})" class="btn btn-outline-primary w-100 mb-2"
+        style="border-radius: 25px;">
+          <i class="fas fa-user-plus me-1"></i> Ajouter ami(e)
+        </button>`;
+    } else {
+      alert(data.message || "Erreur lors de l'annulation");
+    }
+  });
+}
+</script>
+
+<script>
+function voirAmisUtilisateur(userId) {
+  const section = document.getElementById("amisUtilisateurSection");
+  const content = document.getElementById("amisUtilisateurContent");
+
+  if (section.style.display === "block") {
+    section.style.display = "none";
+    return;
+  }
+
+  fetch(`/user-amis/${userId}/`, {
+    headers: {
+      "X-Requested-With": "XMLHttpRequest"
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    content.innerHTML = data.html;
+    section.style.display = "block";
+    window.scrollTo({ top: section.offsetTop - 60, behavior: "smooth" });
+  })
+  .catch(() => alert("Erreur lors du chargement des amis."));
+}
+
+// Pagination AJAX pour amis utilisateur
+document.addEventListener("click", function(event) {
+  if (event.target.closest("#amisUtilisateurContent .pagination a")) {
+    event.preventDefault();
+    const link = event.target.closest("a");
+    fetch(link.href, {
+      headers: {
+        "X-Requested-With": "XMLHttpRequest"
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("amisUtilisateurContent").innerHTML = data.html;
+      window.scrollTo({ top: document.getElementById("amisUtilisateurSection").offsetTop - 60, behavior: 'smooth' });
+    });
+  }
+});
+</script>
+
+<script>
+  const images = [
+    {% for img in all_images_profil %}
+    {
+      url: "{{ img.image.url }}",
+      date: "{{ img.date_ajout|date:'d M Y H:i' }}"
+    },
+    {% endfor %}
+  ];
+
+  let currentIndex = 0;
+
+  function changeImage(direction) {
+    if (!images.length) return;
+    currentIndex = (currentIndex + direction + images.length) % images.length;
+    document.getElementById("carouselImage").src = images[currentIndex].url;
+    document.getElementById("imageDate").textContent = images[currentIndex].date;
+  }
+
+  function zoomImage(src) {
+    const modal = document.createElement("div");
+    modal.style.position = "fixed";
+    modal.style.top = "0";
+    modal.style.left = "0";
+    modal.style.width = "100%";
+    modal.style.height = "100%";
+    modal.style.backgroundColor = "rgba(0,0,0,0.9)";
+    modal.style.zIndex = "9999";
+    modal.style.display = "flex";
+    modal.style.alignItems = "center";
+    modal.style.justifyContent = "center";
+    modal.innerHTML = `
+      <img src="${src}" style="max-width: 90%; max-height: 90%; border-radius: 10px;">
+      <span style="position: absolute; top: 20px; right: 30px; font-size: 40px; color: white; cursor: pointer;">&times;</span>
+    `;
+    modal.querySelector("span").onclick = () => document.body.removeChild(modal);
+    document.body.appendChild(modal);
+  }
+
+</script>
+
+
+
+
+
+
+{% endblock %}

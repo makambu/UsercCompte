@@ -1,0 +1,661 @@
+{% extends 'head/home.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block content %}
+<style>
+body {
+  background-color: #000;
+  margin: 0;
+}
+
+.chat-container {
+  max-width: 720px;
+  margin: 40px auto;
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  height: 90vh;
+}
+
+.chat-header {
+  padding: 15px 25px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.chat-header img {
+  width: 55px; height: 55px;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+.chat-header .user-name {
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #000;
+}
+.chat-header .online-dot {
+  width: 12px; height: 12px;
+  background: #28a745;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #28a745;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.7; }
+}
+
+.chat-box {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 0 0 15px 15px;
+}
+
+.message {
+  max-width: 75%;
+  padding: 12px 18px;
+  margin-bottom: 12px;
+  border-radius: 20px;
+  word-wrap: break-word;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  position: relative;
+  font-size: 0.95rem;
+}
+.message.envoye {
+  background-color: #020202;
+  color: white;
+  margin-left: auto;
+}
+.message.recu {
+  background-color: white;
+  color: #000;
+  margin-right: auto;
+  border: 1px solid #ddd;
+}
+.message small {
+  display: block;
+  font-size: 11px;
+  margin-top: 6px;
+  opacity: 0.65;
+}
+.message img,
+.message video,
+.message audio {
+  max-width: 100%;
+  height: auto;
+  max-height: 200px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.uploading-message {
+  font-style: italic;
+  color: #888;
+  margin-top: 5px;
+}
+
+.chat-input {
+  border-top: 1px solid #ddd;
+  padding: 8px 12px;
+  background: white;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.chat-input input[type="text"] {
+  flex: 1 1 auto;
+  min-width: 100px;
+  border-radius: 20px;
+  border: 1px solid #ccc;
+  padding: 8px 16px;
+  font-size: 1rem;
+}
+.chat-input input[type="text"]:focus {
+  outline: none;
+  border-color: #000;
+}
+
+.chat-input button {
+  background: #000;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 50%;
+  color: white;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+.chat-input button:hover {
+  background: #008829;
+  color: #000;
+}
+
+.chat-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.chat-actions label,
+.chat-actions button {
+  cursor: pointer;
+  font-size: 1.4rem;
+  color: #666;
+}
+.chat-actions label:hover,
+.chat-actions button:hover {
+  color: #000;
+}
+.chat-actions input[type="file"] {
+  display: none;
+}
+
+/* Responsive */
+@media screen and (max-width: 768px) {
+  .chat-container {
+    margin: 0;
+    border-radius: 0;
+    height: 100vh;
+  }
+  .chat-header {
+    padding: 10px;
+  }
+  .chat-box {
+    padding: 12px;
+  }
+  .chat-input {
+    padding: 8px;
+  }
+  .message {
+    font-size: 0.9rem;
+  }
+  .chat-actions {
+    gap: 6px;
+  }
+}
+#emojiBtn:hover i {
+  color: #ffcc00;
+}
+</style>
+
+
+
+<h1 style="color:red;text-align:center;">TEST DE TEMPLATE</h1>
+
+<div class="chat-container">
+
+  <div class="chat-header">
+    <a href="{% url 'voir_profil' user_cible.id %}" class="d-flex align-items-center text-decoration-none">
+      {% if user_cible.image_profil %}
+        <img src="{{ user_cible.image_profil.url }}" alt="Profil">
+      {% else %}
+        <img src="{% static 'images/image_4.png' %}" alt="Profil">
+      {% endif %}
+      <div class="ms-3">
+        <div class="user-name">{{ user_cible.nom }} {{ user_cible.prenom }}</div>
+        {% if en_ligne %}
+          <div class="online-dot" title="En ligne"></div>
+        {% else %}
+          <small class="text-muted">Hors ligne</small>
+        {% endif %}
+      </div>
+    </a>
+  </div>
+
+  <div id="chatBox" class="chat-box">
+    {% for msg in messages %}
+      <div class="message {% if msg.expediteur == utilisateur_connecte %}envoye{% else %}recu{% endif %}">
+        {% if msg.contenu %}<p>{{ msg.contenu|linebreaksbr }}</p>{% endif %}
+        {% if msg.fichier %}
+          {% with ext=msg.fichier.name|lower %}
+            {% if ext|endswith:".jpg" or ext|endswith:".jpeg" or ext|endswith:".png" or ext|endswith:".gif" %}
+              <img src="{{ msg.fichier.url }}" alt="Image message">
+            {% elif ext|endswith:".mp4" or ext|endswith:".webm" %}
+              <video controls preload="metadata"><source src="{{ msg.fichier.url }}"></video>
+            {% elif ext|endswith:".mp3" or ext|endswith:".wav" %}
+              <audio controls preload="metadata"><source src="{{ msg.fichier.url }}"></audio>
+            {% else %}
+              <a href="{{ msg.fichier.url }}" target="_blank" class="text-decoration-none">📎 {{ msg.fichier.name|basename }}</a>
+            {% endif %}
+          {% endwith %}
+        {% endif %}
+        <small>
+          {% if msg.expediteur == utilisateur_connecte %}Moi{% else %}{{ msg.expediteur.nom }}{% endif %}
+          • {{ msg.date_envoi|date:"d/m/Y H:i" }}
+        </small>
+      </div>
+    {% empty %}
+      <p class="text-center text-muted mt-3">Aucun message pour l’instant. A vous le clavier !!!</p>
+    {% endfor %}
+  </div>
+
+  <form id="messageForm" class="chat-input" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="hidden" name="destinataire_id" value="{{ user_cible.id }}">
+
+    <div class="chat-actions">
+      <label for="fileInput" title="Envoyer un fichier 📎" tabindex="0" role="button">
+        <i class="fas fa-paperclip"></i>
+      </label>
+      <input type="file" id="fileInput" name="fichier" accept="image/*,video/*,audio/*,application/pdf">
+
+      <!--<label for="stickerInput" title="Envoyer un sticker 😊" tabindex="0" role="button">
+        <i class="fas fa-smile"></i>
+      </label>
+      <input type="file" id="stickerInput" name="sticker" accept="image/gif,image/png">-->
+
+      <!-- Bouton Emoji (n'ouvre pas les fichiers) -->
+    <button type="button" id="emojiBtn" title="Insérer un emoji"
+      style="width: 32px; height: 32px; background: transparent; border: none; padding: 0; margin: 0; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <i class="fas fa-smile" style="font-size: 18px; color: #555;"></i>
+    </button>
+
+
+
+
+
+
+      <button type="button" id="recordBtn" title="Enregistrer un message vocal 🎙️">
+        <i class="fas fa-microphone"></i>
+      </button>
+      <span id="recordingStatus" class="text-muted ms-2" style="display: none;">🎙️ Voice...</span>
+
+      <button class="shadow" type="button" id="callBtn" title="Appel vocal 📞">
+        <i class="fas fa-phone shadow"></i>
+      </button>
+    </div>
+
+    <input type="text" name="contenu" placeholder="Écris un message..." autocomplete="off" required>
+    <button class="shadow" type="submit" title="Envoyer message"><i class="fas fa-paper-plane shadow"></i></button>
+  </form>
+</div>
+
+<div id="emojiPanel" style="display:none; position:absolute; background:white; border:1px solid #ccc; border-radius:10px; padding:10px; max-width:300px; max-height:200px; overflow-y:auto; z-index:9999;">
+  <!-- emojis ici -->
+</div>
+
+
+<!-- MODAL POUR APPEL AUDIO/VIDÉO -->
+<div id="callModal" class="modal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.75); z-index: 9999; justify-content: center; align-items: center;">
+  <div class="call-box" style="background: #fff; border-radius: 12px; padding: 20px; width: 90%; max-width: 600px; display: flex; flex-direction: column; align-items: center; position: relative;">
+    <h5 id="callTitle" class="text-center mb-3">Appel avec <span id="callUserName">Utilisateur</span></h5>
+
+    <div class="video-wrapper" style="display: flex; justify-content: space-between; gap: 15px; width: 100%;">
+      <video id="remoteVideo" autoplay playsinline style="background: black; width: 100%; height: 300px; border-radius: 10px;"></video>
+      <video id="localVideo" autoplay muted playsinline style="background: #000; width: 150px; height: 150px; border-radius: 10px; position: absolute; bottom: 20px; right: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></video>
+    </div>
+
+    <div class="call-controls mt-4 d-flex justify-content-center gap-3">
+      <button id="acceptCall" class="btn btn-success"><i class="fas fa-phone"></i> Accepter</button>
+      <button id="rejectCall" class="btn btn-danger"><i class="fas fa-phone-slash"></i> Rejeter</button>
+      <button id="endCall" class="btn btn-dark d-none"><i class="fas fa-phone-slash"></i> Terminer</button>
+      <button id="pauseVideo" class="btn btn-secondary d-none"><i class="fas fa-video-slash"></i> Vidéo</button>
+      <button id="muteAudio" class="btn btn-secondary d-none"><i class="fas fa-microphone-slash"></i> Audio</button>
+      <button id="inviteUser" class="btn btn-info d-none"><i class="fas fa-user-plus"></i> Inviter</button>
+    </div>
+  </div>
+</div>
+
+<audio id="ringtone" src="/static/sounds/ringtone.mp3"></audio>
+
+
+
+<script>
+  const chatBox = document.getElementById("chatBox");
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  const messageForm = document.getElementById("messageForm");
+  const inputText = messageForm.elements.contenu;
+  const fileInput = document.getElementById("fileInput");
+
+  const expediteurId = Number("{{ utilisateur_connecte.id }}");
+  const destinataireId = Number("{{ user_cible.id }}");
+  const expediteurNom = "{{ utilisateur_connecte.nom }}";
+
+  const roomName = `${Math.min(expediteurId, destinataireId)}_${Math.max(expediteurId, destinataireId)}`;
+  const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+  const chatSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/chat/${roomName}/`);
+
+  function scrollChatToBottom() {
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  chatSocket.onopen = function () {
+    chatSocket.send(JSON.stringify({
+      type: "messages_read",
+      expediteur_id: destinataireId,
+      destinataire_id: expediteurId
+    }));
+  };
+
+  chatSocket.onclose = function () {
+    console.warn("WebSocket fermé.");
+  };
+
+  chatSocket.onerror = function (e) {
+    console.error("Erreur WebSocket :", e);
+  };
+
+  const notifSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/notifications/`);
+
+notifSocket.onopen = function () {
+  console.log("Notification WebSocket connecté.");
+};
+
+notifSocket.onmessage = function (e) {
+  const data = JSON.parse(e.data);
+
+  if (data.type === "call_incoming") {
+    document.getElementById("callUserName").innerText = data.from_name;
+    document.getElementById("callModal").style.display = "flex";
+
+    const ringtone = document.getElementById("ringtone");
+    ringtone.currentTime = 0;
+    ringtone.play();
+  }
+
+  if (data.type === "new_message_notification") {
+    // Ajoute ton badge ici
+    console.log("🔔 Nouveau message de :", data.from_id);
+  }
+
+  if (data.type === "remove_message_notification") {
+    console.log("✅ Badge à retirer pour :", data.from_id);
+  }
+};
+
+notifSocket.onerror = function (e) {
+  console.error("Erreur sur le WebSocket notif :", e);
+};
+
+notifSocket.onclose = function () {
+  console.warn("Notification WebSocket fermé.");
+};
+
+
+  chatSocket.onmessage = function (e) {
+  const data = JSON.parse(e.data);
+  console.log("Message WebSocket reçu:", data);  // <-- AJOUTE CE LOG
+
+  if (data.type === "call_incoming") {
+    // ✅ Ce bloc ne doit s'exécuter que côté destinataire
+    document.getElementById("callUserName").innerText = data.from_name;
+    document.getElementById("callModal").style.display = "flex";
+
+    const ringtone = document.getElementById("ringtone");
+    ringtone.currentTime = 0;
+    ringtone.play();
+  }
+
+    if (data.type === "call_answered") {
+      ringtone.pause();
+      if (data.answer === "accept") {
+        endCallBtn.classList.remove("d-none");
+        rejectCallBtn.classList.add("d-none");
+        acceptCallBtn.classList.add("d-none");
+      } else {
+        callModal.style.display = "none";
+        alert("L'utilisateur a rejeté l'appel.");
+      }
+      return;
+    }
+
+    if (data.type === "call_ended") {
+      ringtone.pause();
+      callModal.style.display = "none";
+      alert("L'appel a été terminé.");
+      return;
+    }
+
+    // --------------------- Gestion des messages ----------------------
+    const div = document.createElement("div");
+    div.className = "message " + (data.expediteur_id == expediteurId ? "envoye" : "recu");
+
+    let contenu = "";
+    if (data.message) contenu += `<p>${data.message}</p>`;
+
+    if (data.file_url) {
+      const ext = data.file_ext.toLowerCase();
+      if (["jpg", "jpeg", "png", "gif"].includes(ext)) {
+        contenu += `<img src="${data.file_url}" alt="image">`;
+      } else if (["mp4", "webm"].includes(ext)) {
+        contenu += `<video controls><source src="${data.file_url}"></video>`;
+      } else if (["mp3", "wav", "webm"].includes(ext)) {
+        contenu += `<audio controls><source src="${data.file_url}"></audio>`;
+      } else {
+        contenu += `<a href="${data.file_url}" target="_blank">📎 ${data.file_name}</a>`;
+      }
+    }
+
+    contenu += `<small>${data.expediteur_id == expediteurId ? "Moi" : data.expediteur} • Maintenant</small>`;
+    div.innerHTML = contenu;
+    chatBox.appendChild(div);
+    scrollChatToBottom();
+  };
+
+  // ------------------ Envoi de message texte ------------------
+  messageForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    const message = inputText.value.trim();
+    if (!message) return;
+
+    chatSocket.send(JSON.stringify({
+      message: message,
+      expediteur_id: expediteurId,
+      expediteur_nom: expediteurNom,
+      destinataire_id: destinataireId
+    }));
+
+    inputText.value = "";
+  });
+
+  // ------------------ Envoi de fichiers ------------------
+  fileInput.addEventListener("change", function () {
+    if (fileInput.files.length === 0) return;
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+
+    const tempMsg = document.createElement("div");
+    tempMsg.className = "message envoyee uploading-message";
+    tempMsg.textContent = `Envoi de « ${file.name} » en cours...`;
+    chatBox.appendChild(tempMsg);
+    scrollChatToBottom();
+
+    reader.onload = function () {
+      chatSocket.send(JSON.stringify({
+        file: reader.result,
+        file_name: file.name,
+        expediteur_id: expediteurId,
+        expediteur_nom: expediteurNom,
+        destinataire_id: destinataireId
+      }));
+      fileInput.value = "";
+      setTimeout(() => tempMsg.remove(), 1500);
+    };
+
+    reader.readAsDataURL(file);
+  });
+
+  // ------------------ Message vocal ------------------
+  let mediaRecorder;
+  let recordedChunks = [];
+
+  const recordBtn = document.getElementById("recordBtn");
+  const recordingStatus = document.getElementById("recordingStatus");
+
+  recordBtn.addEventListener("click", async () => {
+    if (!mediaRecorder || mediaRecorder.state === "inactive") {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      recordedChunks = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: "audio/webm" });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          chatSocket.send(JSON.stringify({
+            file: reader.result,
+            file_name: `voice_${Date.now()}.webm`,
+            expediteur_id: expediteurId,
+            expediteur_nom: expediteurNom,
+            destinataire_id: destinataireId
+          }));
+        };
+        reader.readAsDataURL(blob);
+      };
+
+      mediaRecorder.start();
+      recordingStatus.style.display = "inline";
+      recordBtn.innerHTML = `<i class="fas fa-stop"></i>`;
+
+      setTimeout(() => {
+        if (mediaRecorder.state === "recording") {
+          mediaRecorder.stop();
+          recordingStatus.style.display = "none";
+          recordBtn.innerHTML = `<i class="fas fa-microphone"></i>`;
+        }
+      }, 20000);
+    } else if (mediaRecorder.state === "recording") {
+      mediaRecorder.stop();
+      recordingStatus.style.display = "none";
+      recordBtn.innerHTML = `<i class="fas fa-microphone"></i>`;
+    }
+  });
+
+  // ------------------ Gestion Appel Vocal ------------------
+  const callBtn = document.getElementById("callBtn");
+  const callModal = document.getElementById("callModal");
+  const ringtone = document.getElementById("ringtone");
+  const callTitle = document.getElementById("callTitle");
+  const callUserName = document.getElementById("callUserName");
+  const acceptCallBtn = document.getElementById("acceptCall");
+  const rejectCallBtn = document.getElementById("rejectCall");
+  const endCallBtn = document.getElementById("endCall");
+
+  callBtn.addEventListener("click", () => {
+    alert("⏳ Cette fonctionnalité d'appel vocal sera bientôt disponible. Merci de votre patience !");
+    return;
+    chatSocket.send(JSON.stringify({
+      type: "call_start",
+      expediteur_id: expediteurId,
+      destinataire_id: destinataireId,
+      from_name: expediteurNom
+    }));
+    callUserName.textContent = `avec ${document.querySelector('.user-name').textContent}`;
+    callModal.style.display = "flex";
+    ringtone.play();
+  });
+
+  acceptCallBtn.addEventListener("click", () => {
+    chatSocket.send(JSON.stringify({
+      type: "call_answer",
+      answer: "accept",
+      from_id: expediteurId
+    }));
+    ringtone.pause();
+    endCallBtn.classList.remove("d-none");
+    rejectCallBtn.classList.add("d-none");
+    acceptCallBtn.classList.add("d-none");
+  });
+
+  rejectCallBtn.addEventListener("click", () => {
+    chatSocket.send(JSON.stringify({
+      type: "call_answer",
+      answer: "reject",
+      from_id: expediteurId
+    }));
+    ringtone.pause();
+    callModal.style.display = "none";
+  });
+
+  endCallBtn.addEventListener("click", () => {
+    chatSocket.send(JSON.stringify({
+      type: "call_end",
+      from_id: expediteurId
+    }));
+    callModal.style.display = "none";
+    ringtone.pause();
+  });
+</script>
+
+
+
+<script>
+const emojiBtn = document.getElementById("emojiBtn");
+const emojiPanel = document.getElementById("emojiPanel");
+const inputMsg = document.querySelector("input[name='contenu']"); // champ message
+
+emojiBtn.addEventListener("click", () => {
+  if (emojiPanel.style.display === "block") {
+    emojiPanel.style.display = "none";
+    return;
+  }
+
+  // Afficher temporairement pour mesurer
+  emojiPanel.style.visibility = "hidden";
+  emojiPanel.style.display = "block";
+
+  const rect = emojiBtn.getBoundingClientRect();
+  const scrollY = window.scrollY;
+  const scrollX = window.scrollX;
+
+  emojiPanel.style.left = `${rect.left + scrollX}px`;
+  emojiPanel.style.top = `${rect.top + scrollY - emojiPanel.offsetHeight - 8}px`;
+
+  emojiPanel.style.visibility = "visible";
+});
+
+// Ajouter les emojis au panneau
+const emojis = ["😀", "😂", "😍", "😘", "😎", "😢", "🤔", "🙌", "🔥", "🎉", "💯", "❤️", "🤩", "😡", "😇", "😜", "🤗", "💖", "💔", "😱", "👏", "👍", "👎", "🙏",
+     "😁", "😅", "🤣", "🙂", "🙃", "😉", "🥰", "🤩", "😗", "☺️", "😚", "😋", "😜", "🤪", "🤑", "🤗", "🤭", "🤫",
+      "🤔", "🤐", "🤨", "😐", "😑", "😶", "😏", "😒", "🙄", "😬", "🤥", "😌", "😔", "😪", "🤤", "😴", "😷", "🤒", "🤕", "🤢",
+       "🤮", "🥵", "🥶", "😵", "🤯", "🤠", "🥳", "😎", "🤓", "🧐", "😕", "😟", "🙁", "☹️", "😮", "😯", "😲", "😳", "🥺", "😦",
+        "😧", "😨", "😰", "😥", "😢", "😭", "😱", "😖", "😣", "😞", "😓", "😩", "😫", "🥱", "😤", "😠", "🤬", "😈", "👿", "💀",
+         "☠️", "💩", "🤡", "👹", "👺", "👻", "👽", "👾", "🤖", "🎃", "😺", "😹", "😻", "😼", "🙀", "😿", "😾",
+         "💕", "💖", "💗", "💓", "💞", "💋", "🎉", "🎊", "🎮", "🎬", "🎭", "🎵", "🎤", "🎧", "🎯", "🏆", "👋", "🙌",
+         "🤝", "🤗", "🤟",
+  ]; // tu peux compléter jusqu’à 100+
+
+emojis.forEach(e => {
+  const span = document.createElement("span");
+  span.style.cursor = "pointer";
+  span.style.margin = "5px";
+  span.style.fontSize = "20px";
+  span.innerText = e;
+  span.onclick = () => {
+    inputMsg.value += e;
+    emojiPanel.style.display = "none";
+  };
+  emojiPanel.appendChild(span);
+});
+
+// Fermer si on clique en dehors
+document.addEventListener("click", function (event) {
+  if (!emojiPanel.contains(event.target) && event.target !== emojiBtn) {
+    emojiPanel.style.display = "none";
+  }
+});
+</script>
+
+
+
+<!-- Scripts call audio et video -->
+
+
+
+{% endblock %}

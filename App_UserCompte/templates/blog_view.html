@@ -1,0 +1,232 @@
+{% extends 'head/home.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    .blog-card {
+        min-height: 300px;
+        transition: 0.3s ease-in-out;
+    }
+
+    .blog-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .blog-image {
+        height: 100%;
+        object-fit: cover;
+        border-radius: 5px 0 0 5px;
+    }
+
+    .blog-content-scroll {
+        max-height: 150px;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+
+    .card-body-bottom {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid #ccc;
+        padding-top: 8px;
+        margin-top: auto;
+    }
+
+    .comment-section {
+        max-height: 200px;
+        overflow-y: auto;
+        background-color: #f9f9f9;
+        padding: 10px;
+        border-radius: 8px;
+    }
+</style>
+
+<!-- Carousel de bienvenue -->
+<div class="carousel-inner mt-4">
+    <div class="carousel-item active position-relative">
+        <img src="{% static 'images/ima_blo.jpg' %}" class="d-block w-100"
+            style="height: 250px; object-fit: fill; object-position: top; border-radius: 8px;">
+
+        <!-- Zone de texte superposée background: rgba(0, 0, 0, 0.4); -->
+        <div class="carousel-caption d-flex flex-column justify-content-end text-start pb-3"
+            style="bottom: 0; width: 100%; left: 0; right: 0;">
+            <h3 class="text-center fw-bold text-white mb-1">Bienvenue dans le monde des idées</h3>
+            <p class="text-center" style="font-weight: 500;">Découvrez et interagissez avec les blogs publiés pour
+                développer votre connaissance.</p>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-0">
+    <div class="row d-flex justify-content-between align-items-center mt-5 mb-3">
+        <div class="col-auto d-flex align-items-center">
+            <a href="{% url 'homes' %}" class="me-3 text-decoration-none text-blue fs-4" title="Retour à l'accueil">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            <h4 class="mb-0 fw-bold">📝 Tous les blogs publiés</h4>
+        </div>
+    
+        <div class="col-md-6">
+            <form method="get" class="d-flex justify-content-end" role="search">
+                <input type="search" name="search" class="form-control me-2"
+                    placeholder="Rechercher un blog par titre ou auteur..." value="{{ search_query }}">
+                <button class="btn btn-outline-primary" type="submit">Rechercher</button>
+            </form>
+        </div>
+    </div>
+    <hr style="border-color: rgb(121, 119, 119);">
+
+    {% if all_blogs %}
+    {% for blog in all_blogs %}
+    <div class="card mb-4 blog-card shadow">
+        <div class="row g-0">
+            {% if blog.image %}
+            <div class="col-md-4">
+                <img src="{{ blog.image.url }}" alt="{{ blog.titre }}"
+                    class="img-fluid blog-image rounded-circle mx-auto d-block"
+                    style="width: 100%; aspect-ratio: 1/1; object-fit: fill;">
+            </div>
+            {% endif %}
+            <div class="col-md-8 d-flex flex-column">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">{{ blog.titre }}</h5>
+                    <div class="blog-content-scroll">
+                        <p class="card-text" style="text-align: justify;">{{ blog.contenu }}</p>
+                    </div>
+                    <p class="text-muted mt-2">
+                        Publié par <strong> {{ blog.auteur.nom }} {{ blog.auteur.prenom }} </strong> le {{ blog.date_creation|date:"d M Y à H:i" }}
+                    </p>
+                    <div class="card-body-bottom">
+                        <form method="post" action="{% url 'aimer_blog' blog.id %}" class="m-0">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                ❤️ {{ blog.likes.count }} J’aime
+                            </button>
+                        </form>
+                        <button class="btn btn-sm btn-outline-primary" onclick="toggleBlogDetails('{{ blog.id }}')">
+                            Voir & Commenter
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Zone des commentaires (cachée par défaut) -->
+                <div id="blogDetails-{{ blog.id }}" style="display: none;" class="p-3">
+                    <div class="commentaires-zone mb-1" style="max-height: 100px; overflow-y: auto; padding-right: 5px;">
+                        {% for commentaire in blog.commentaires.all %}
+                        <div class="mb-2 border-bottom pb-2">
+                            <strong>{{ commentaire.auteur.nom }}</strong><br>
+                            <small class="text-muted">{{ commentaire.date_commentaire|date:"d/m/Y à H:i" }}</small>
+                            <p class="mb-1">{{ commentaire.contenu }}</p>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted">Aucun commentaire pour ce blog.</p>
+                        {% endfor %}
+                    </div>
+                    <form method="post" action="{% url 'ajouter_commentaire' blog.id %}" class="form-comment-blog">
+                        {% csrf_token %}
+                        <textarea name="contenu" class="form-control mb-2" rows="2" placeholder="Ajouter un commentaire..."
+                            required></textarea>
+                        <button type="submit" class="btn btn-sm btn-dark w-50">Commenter</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    {% if search_query %}
+    <div class="alert alert-info text-center">
+        Aucun blog ne correspond à votre recherche : <strong>{{ search_query }}</strong>.<br>
+        <a href="{% url 'blog_Views' %}" class="btn btn-sm btn-primary mt-2">
+            Retour à tous les blogs
+        </a>
+    </div>
+    {% else %}
+    <div class="alert alert-warning text-center">
+        Aucun blog n’est disponible pour le moment.
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+
+<script>
+    function toggleBlogDetails(blogId) {
+        const section = document.getElementById('blogDetails-' + blogId);
+        section.style.display = (section.style.display === "none" || section.style.display === "") ? "block" : "none";
+    }
+</script>
+
+<script>
+    // Gestion AJAX des likes de blog
+    document.querySelectorAll('.card-body-bottom form').forEach(form => {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const btn = this.querySelector('button');
+            const url = this.action;
+            const csrfToken = this.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.liked !== undefined) {
+                    btn.innerHTML = `${data.liked ? '❤️' : '🤍'} ${data.nb_likes} J’aime`;
+                }
+            })
+            .catch(error => console.error('Erreur AJAX like blog:', error));
+        });
+    });
+</script>
+
+<script>
+    document.querySelectorAll('.form-comment-blog').forEach(form => {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const url = this.action;
+            const csrf = this.querySelector('[name=csrfmiddlewaretoken]').value;
+            const textarea = this.querySelector('textarea');
+            const contenu = textarea.value.trim();
+            const container = this.closest('.p-3').querySelector('.commentaires-zone');
+
+            if (!contenu) return;
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrf,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: new FormData(this)
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.texte) {
+                        const div = document.createElement('div');
+                        div.className = 'mb-2 border-bottom pb-2';
+                        div.innerHTML = `
+                            <strong>${data.auteur_nom}</strong><br>
+                            <small class="text-muted">${data.date}</small>
+                            <p class="mb-1">${data.texte}</p>
+                        `;
+                        container.prepend(div);
+                        textarea.value = '';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur lors de l\'ajout du commentaire :', error);
+                });
+        });
+    });
+</script>
+
+
+
+{% endblock %}

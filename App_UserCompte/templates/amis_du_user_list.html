@@ -1,0 +1,35 @@
+{% load static %}
+
+<h5 class="text-success mt-1 mb-3">
+  <i class="fas fa-users me-2"></i> Ami(e)s pour {{ user_cible.nom }} | Total : ({{ total_amis }})
+</h5>
+{% if amis %}
+  {% for ami in amis %}
+    <div class="d-flex align-items-center justify-content-between border-bottom py-2">
+      <div class="d-flex align-items-center">
+        <a href="{% url 'voir_profil' ami.id %}">
+          {% if ami.image_profil %}
+            <img src="{{ ami.image_profil.url }}" class="rounded-circle me-2" width="40" height="40" style="object-fit: fill;">
+          {% else %}
+            <img src="{% static 'images/image_4.png' %}" class="rounded-circle me-2" width="40" height="40" style="object-fit: fill;">
+          {% endif %}
+        </a>
+        <strong>{{ ami.nom }} {{ ami.prenom }}</strong>
+      </div>
+      <a href="{% url 'voir_profil' ami.id %}" class="btn btn-outline-light text-muted btn-sm">Voir profil</a>
+    </div>
+  {% endfor %}
+
+<div class="d-flex justify-content-center mt-3 pagination">
+    {% if amis.has_previous %}
+    <a href="{% url 'amis_du_user' user_cible.id %}?page={{ amis.previous_page_number }}"
+        class="btn btn-outline-primary me-2">Précédent</a>
+    {% endif %}
+    {% if amis.has_next %}
+    <a href="{% url 'amis_du_user' user_cible.id %}?page={{ amis.next_page_number }}"
+        class="btn btn-outline-primary">Suivant</a>
+    {% endif %}
+</div>
+{% else %}
+  <p class="text-muted">Aucun(e) ami(e) trouvé(e).</p>
+{% endif %}

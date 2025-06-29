@@ -1,0 +1,240 @@
+{% extends 'head/home.html' %}
+{% load static %}
+{% load custom_filters %}
+
+
+{% block content %}
+
+<style>
+  .conversation-card {
+    background: #000000;
+    border-radius: 12px;
+    padding: 15px 20px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    transition: background-color 0.3s ease;
+    position: relative;
+  }
+  .conversation-card:hover {
+    background-color: #afafaf;
+  }
+  .conversation-avatar {
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    object-fit: fill;
+  }
+  .online-indicator {
+    width: 13px;
+    height: 13px;
+    background: #28a745;
+    border: 2px solid white;
+    border-radius: 50%;
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+  }
+  .conversation-info {
+    margin-left: 15px;
+    flex-grow: 1;
+  }
+  .conversation-name {
+    font-weight: bold;
+    font-size: 1rem;
+    color: #ffffff;
+  }
+  .conversation-snippet {
+    font-size: 0.85rem;
+    color: #666;
+  }
+  .conversation-time {
+    font-size: 0.75rem;
+    color: #999;
+  }
+  .new-msg-badge {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: #dc3545;
+    color: white;
+    border-radius: 50%;
+    font-size: 0.65rem;
+    width: 18px;
+    height: 18px;
+    text-align: center;
+    line-height: 18px;
+  }
+</style>
+
+<!-- Carousel de bienvenue -->
+<div class="carousel-inner mt-4">
+    <div class="carousel-item active position-relative">
+        <img src="{% static 'images/imag_sol.jpg' %}" class="d-block w-100"
+            style="height: 250px; object-fit: fill; object-position: top; border-radius: 8px;">
+
+        <!-- Zone de texte superposée -->
+        <div class="carousel-caption d-flex flex-column justify-content-end text-start pb-3"
+            style="bottom: 0; width: 100%; left: 0; right: 0;">
+            <h3 class="text-center fw-bold text-white mb-1">Bienvenue dans l'univers solola</h3>
+            <p class="text-center" style="font-weight: 500;">Découvrez et interagissez avec vos ami(e)s en commun pour
+                développer la communication.</p>
+        </div>
+    </div>
+</div>
+
+
+<div class="container mt-0 mb-5">
+  <div class="row">
+    <div class="col-12 d-flex align-items-center mt-5 mb-3">
+      <a href="{% url 'homes' %}" class="me-3 text-decoration-none text-blue fs-4" title="Retour à l'accueil">
+        <i class="fas fa-chevron-left"></i>
+      </a>
+      <h4 class="mb-0 text-primary fw-bold"><i class="bi bi-chat me-2"></i>Mes Conversations</h4>
+    </div>
+    <hr style="border-color: rgb(121, 119, 119);">
+  </div>
+
+  {% for user in conversations %}
+    <a href="{% url 'chat_user' user.id %}" class="text-decoration-none">
+      <div class="conversation-card" data-user-id="{{ user.id }}">
+
+        <!-- Avatar et statut en ligne -->
+        <div class="position-relative">
+          {% if user.image_profil %}
+            <img src="{{ user.image_profil.url }}" class="conversation-avatar shadow-sm">
+          {% else %}
+            <img src="{% static 'images/image_4.png' %}" class="conversation-avatar shadow-sm">
+          {% endif %}
+          {% if user.id in en_ligne_ids %}
+            <span class="online-indicator"></span>
+          {% endif %}
+        </div>
+
+        <!-- Nom + message -->
+        <div class="conversation-info">
+          <div class="conversation-name">{{ user.nom }} {{ user.prenom }}</div>
+          <div class="conversation-snippet">
+            {% with msg=last_messages|get:user.id %}
+              {% if msg %}
+                {% if msg.fichier %}
+                  📎 Fichier envoyé
+                {% else %}
+                  {{ msg.contenu|truncatechars:40 }}
+                {% endif %}
+                {% else %}
+                Aucun message
+              {% endif %}
+            {% endwith %}
+          </div>
+        </div>
+
+        <!-- Heure -->
+        <div class="conversation-time">
+          {% with msg=last_messages|get:user.id %}
+            {% if msg %}{{ msg.date_envoi|date:"d/m/Y H:i" }}{% endif %}
+          {% endwith %}
+        </div>
+
+        <!-- Badge nouveau message -->
+        {% if user.id in messages_non_lus %}
+          <span class="new-msg-badge">1</span>
+        {% endif %}
+      </div>
+    </a>
+  {% empty %}
+    <div class="alert alert-info text-center">Aucune conversation pour l’instant.</div>
+  {% endfor %}
+</div>
+
+
+
+<script>
+  {% if request.session.user_id %}
+  const userId = "{{ request.session.user_id }}";
+  const notifSocket = new WebSocket(
+    (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/ws/notify/" + userId + "/"
+  );
+
+  notifSocket.onmessage = function (e) {
+    const data = JSON.parse(e.data);
+
+    // Nouveau message reçu
+    if (data.type === "new_message" || data.type === "new_message_notification") {
+      const fromId = data.from_id;
+
+      // Badge sur carte de conversation
+      const card = document.querySelector(`.conversation-card[data-user-id="${fromId}"]`);
+      if (card) {
+        const existingBadge = card.querySelector(".new-msg-badge");
+        if (!existingBadge) {
+          const badge = document.createElement("span");
+          badge.className = "new-msg-badge";
+          badge.textContent = "1";
+          card.appendChild(badge);
+        }
+      }
+
+      // Badge global solola
+      const sololaBadge = document.getElementById("sololaBadge");
+      const sololaCount = document.getElementById("sololaCount");
+      if (sololaBadge && sololaCount) {
+        let count = parseInt(sololaCount.textContent || "0");
+        sololaCount.textContent = count + 1;
+        sololaBadge.classList.remove("d-none");
+      }
+
+      // Lecture son notification
+    }
+
+    // Retirer badge si messages lus
+    if (data.type === "remove_message_notification") {
+      const fromId = data.from_id;
+
+      // Supprimer badge de la carte
+      const card = document.querySelector(`.conversation-card[data-user-id="${fromId}"]`);
+      if (card) {
+        const badge = card.querySelector(".new-msg-badge");
+        if (badge) badge.remove();
+      }
+
+      // Mettre à jour le badge global
+      const sololaBadge = document.getElementById("sololaBadge");
+      const sololaCount = document.getElementById("sololaCount");
+      if (sololaCount && sololaBadge) {
+        let count = parseInt(sololaCount.textContent || "0");
+        count = Math.max(0, count - 1);
+        sololaCount.textContent = count;
+        if (count === 0) sololaBadge.classList.add("d-none");
+      }
+    }
+  };
+
+  notifSocket.onclose = () => console.warn("WebSocket de notification fermé.");
+  {% endif %}
+</script>
+
+<!-- Optionnel : réinitialiser le badge au chargement si page isolée -->
+<script>
+  window.addEventListener("load", () => {
+    const sololaBadge = document.getElementById("sololaBadge");
+    const sololaCount = document.getElementById("sololaCount");
+
+    if (sololaBadge && sololaCount) {
+      const count = parseInt(sololaCount.textContent || "0");
+      if (count <= 0) {
+        sololaCount.textContent = "0";
+        sololaBadge.classList.add("d-none");
+      }
+    }
+  });
+</script>
+
+
+
+
+
+
+
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends 'head/home.html' %}
+{% load static %}
+
+{% block content %}
+
+
+<!-- Carousel de bienvenue -->
+<div class="carousel-inner mt-4">
+    <div class="carousel-item active position-relative">
+        <img src="{% static 'images/ima_no.jpg' %}" class="d-block w-100"
+            style="height: 250px; object-fit: fill; object-position: top; border-radius: 8px;">
+        
+        <!-- Zone de texte superposée -->
+        <div class="carousel-caption d-flex flex-column mb-0 justify-content-end text-start pb-1"
+             style="bottom: 0; width: 100%; left: 0; right: 0;">
+            <h3 class="text-center fw-bold text-white mb-0">Bienvenue dans le monde des notifications</h3>
+            <p class="text-center" style="font-weight: 500;">Découvrez les personnes ayant aimer et commenter des activités sur ton environnement d'attente.</p>
+        </div>
+    </div>
+</div>
+
+
+
+
+<div class="container pt-3">
+    <div class="row">
+        <div class="col-12 d-flex align-items-center mt-4 mb-2">
+            <a href="{% url 'homes' %}" class="me-3 text-decoration-none text-blue fs-4" title="Retour à l'accueil">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            <h4 class="mb-0 fw-bold">🛎️ Vos notifications</h4>
+        </div>
+        <hr style="border-color: rgb(121, 119, 119);">
+    </div>
+
+    {% if notifications %}
+    {% for n in notifications %}
+    <div class="card shadow-sm mb-3">
+        <div class="card-body d-flex">
+            {% if n.emetteur and n.emetteur.image_profil %}
+            <a href="{% url 'voir_profil' n.emetteur.id %}">
+                <img src="{{ n.emetteur.image_profil.url }}" class="rounded-circle me-3" width="50" height="50">
+            </a>
+            {% else %}
+            <a href="{% url 'voir_profil' n.emetteur.id %}">
+                <img src="{% static 'images/image_4.png' %}" class="rounded-circle me-3" width="50" height="50">
+            </a>
+            {% endif %}
+            <div>
+                <p class="mb-1">
+                    <strong>
+                        {% if n.emetteur %}
+                        <a href="{% url 'voir_profil' n.emetteur.id %}">{{ n.emetteur.nom }}</a>
+                        {% else %} Système {% endif %}
+                    </strong>
+                    —
+                    {% if n.type == 'like_video' %}
+                    <i class="bi bi-heart-fill text-danger"></i>
+                    {% elif n.type == 'commentaire_video' %}
+                    <i class="bi bi-chat-left-text-fill text-success"></i>
+                    {% endif %}
+                    {{ n.message }}
+                </p>
+                <small class="text-muted">{{ n.date|date:"d/m/Y H:i" }}</small>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="alert alert-info">Aucune notification pour l’instant.</div>
+    {% endif %}
+</div>
+{% endblock %}
