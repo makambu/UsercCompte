@@ -1,0 +1,1 @@
+web: gunicorn UserCompte.wsgi:application
