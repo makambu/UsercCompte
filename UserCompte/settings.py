@@ -19,9 +19,7 @@ SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=False, cast=bool)
 ALLOWED_HOSTS = ["app-cgm.onrender.com", "localhost", "127.0.0.1"]
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://app-cgm.onrender.com",
-]
+CSRF_TRUSTED_ORIGINS = ['https://app-cgm.onrender.com']
 
 # Applications
 INSTALLED_APPS = [
