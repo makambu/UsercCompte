@@ -11,7 +11,7 @@ class UpdateLastConnectionMiddleware:
         user_id = request.session.get('user_id')
         if user_id:
             try:
-                from App_UserCompte.models import Profil  # adapte selon ton app
+                from app_usercompte.models import Profil  # adapte selon ton app
                 profil = Profil.objects.get(id=user_id)
                 profil.derniere_connexion = timezone.now()
                 profil.save(update_fields=['derniere_connexion'])

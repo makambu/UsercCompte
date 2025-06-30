@@ -5,7 +5,7 @@ import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
 from django.core.files.base import ContentFile
-from App_UserCompte.models import Profil, Message
+from app_usercompte.models import Profil, Message
 
 logger = logging.getLogger(__name__)
 

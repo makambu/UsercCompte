@@ -27,7 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'channels',
-    'App_UserCompte',
+    'app_usercompte',
     'widget_tweaks',
 ]
 
@@ -40,7 +40,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'App_UserCompte.middleware.UpdateLastConnectionMiddleware'
+    'app_usercompte.middleware.UpdateLastConnectionMiddleware'
 ]
 
 ROOT_URLCONF = 'UserCompte.urls'
@@ -55,8 +55,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'App_UserCompte.context_processors.nouvelles_videos',
-                'App_UserCompte.context_processors.base_context',
+                'app_usercompte.context_processors.nouvelles_videos',
+                'app_usercompte.context_processors.base_context',
             ],
         },
     },
@@ -114,7 +114,7 @@ USE_TZ = True
 
 # Statique & Média
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, "App_UserCompte/static")]
+STATICFILES_DIRS = [os.path.join(BASE_DIR, "app_usercompte/static")]
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
@@ -140,7 +140,7 @@ JAZZMIN_SETTINGS = {
     "show_sidebar": True,
     "navigation_expanded": True,
 
-    "search_model": "App_UserCompte.Profil",
+    "search_model": "app_usercompte.Profil",
     "hide_apps": [],
     "hide_models": [],
     "order_with_respect_to": ["auth", "Profil", "Blog", "VideoPublier"],

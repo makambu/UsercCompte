@@ -18,7 +18,7 @@ application = get_asgi_application()
 
 from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
-import App_UserCompte.chat.routing
+import app_usercompte.chat.routing
 
 
 
@@ -26,7 +26,7 @@ application = ProtocolTypeRouter({
     "http": get_asgi_application(),
     "websocket": AuthMiddlewareStack(
         URLRouter(
-            App_UserCompte.chat.routing.websocket_urlpatterns
+            app_usercompte.chat.routing.websocket_urlpatterns
         )
     ),
 })
