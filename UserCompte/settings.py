@@ -1,31 +1,23 @@
 from pathlib import Path
 import os
-import openai
+from decouple import config
 from dotenv import load_dotenv
 
-load_dotenv()  
-openai.api_key = os.getenv("OPENAI_API_KEY")
+load_dotenv()
 
+# OpenAI
+import openai
+openai.api_key = config("OPENAI_API_KEY")
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 TEMPLATES_DIRS = os.path.join(BASE_DIR, 'templates')
 
+# Sécurité
+SECRET_KEY = config("SECRET_KEY")
+DEBUG = config("DEBUG", default=False, cast=bool)
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", cast=lambda v: v.split(","))
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-k08ogl=of0o93xfq!v5fglp$5x(ij*8yv525d(xoc+&a5kf32f'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ['*']
-
-
-# Application definition
-
+# Applications
 INSTALLED_APPS = [
     'jazzmin',
     'django.contrib.admin',
@@ -73,44 +65,34 @@ TEMPLATES = [
 WSGI_APPLICATION = 'UserCompte.wsgi.application'
 ASGI_APPLICATION = "UserCompte.asgi.application"
 
-
-# Pour mémoire Redis ou in-memory (test local)
+# Channels (local ou Redis si Render Redis utilisé)
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels.layers.InMemoryChannelLayer"
     }
 }
 
-
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
+# Base de données (MySQL pour Render)
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': config("DB_NAME"),
+        'USER': config("DB_USER"),
+        'PASSWORD': config("DB_PASSWORD"),
+        'HOST': config("DB_HOST"),
+        'PORT': config("DB_PORT", default=3306, cast=int),
     }
 }
 
-
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
+# Validation des mots de passe
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+# Logging (facultatif mais utile sur Render)
 LOGGING = {
     "version": 1,
     "handlers": {
@@ -124,37 +106,22 @@ LOGGING = {
     },
 }
 
-
-
-# Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
+# Langue & fuseau
 LANGUAGE_CODE = 'fr'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
+# Statique & Média
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "App_UserCompte/static"),
-]
+STATICFILES_DIRS = [os.path.join(BASE_DIR, "App_UserCompte/static")]
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
+# Autres
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50 Mo
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800
 FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800
 
 # --------------------
