@@ -77,7 +77,7 @@ CHANNEL_LAYERS = {
 # Base de données (MySQL pour Render)
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',  # ✅ PostgreSQL
+        'ENGINE': 'django.db.backends.postgresql',  # PostgreSQL
         'NAME': config("DB_NAME"),
         'USER': config("DB_USER"),
         'PASSWORD': config("DB_PASSWORD"),
