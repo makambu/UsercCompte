@@ -100,7 +100,7 @@ def homes(request):
     })
 
 
-@csrf_exempt
+
 def login_user(request):
     if request.method == 'POST':
         phone = request.POST.get('phone')
