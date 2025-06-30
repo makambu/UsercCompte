@@ -98,16 +98,9 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Logging (facultatif mais utile sur Render)
 LOGGING = {
-    "version": 1,
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-        },
-    },
-    "root": {
-        "handlers": ["console"],
-        "level": "INFO",
-    },
+    'version': 1,
+    'handlers': {'console': {'class': 'logging.StreamHandler',}},
+    'root': {'handlers': ['console'], 'level': 'DEBUG',},
 }
 
 # Langue & fuseau
