@@ -1,1 +1,1 @@
-web: gunicorn UserCompte.wsgi:application
+web: daphne UserCompte.asgi:application

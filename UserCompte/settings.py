@@ -12,6 +12,8 @@ openai.api_key = config("OPENAI_API_KEY")
 BASE_DIR = Path(__file__).resolve().parent.parent
 TEMPLATES_DIRS = os.path.join(BASE_DIR, 'templates')
 
+SECRET_KEY = 'django-insecure-k08ogl=of0o93xfq!v5fglp$5x(ij*8yv525d(xoc+&a5kf32f'
+
 # Sécurité
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=False, cast=bool)
