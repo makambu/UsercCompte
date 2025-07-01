@@ -33,11 +33,13 @@ def splash_view(request):
     user_id = request.session.get("user_id")  # récupère l'ID de session s'il existe
     return render(request, 'includ/splash.html', {"user_id": user_id})
 
+
 def homes(request):
-    user_id = request.session.get('user_id')
+    user_id = request.session.get("user_id")
     reset_requested = request.GET.get('reset') == 'true'
     search_query = request.GET.get('q', '').strip()
 
+    # Gestion du reset mot de passe via POST
     if request.method == 'POST' and request.POST.get('action') == 'reset_password':
         email = request.POST.get('email')
         new_password = request.POST.get('new_password')
@@ -52,6 +54,7 @@ def homes(request):
             messages.error(request, "Email introuvable.")
             reset_requested = True
 
+    # Si pas d'utilisateur connecté (pas d'user_id en session)
     if not user_id:
         utilisateurs = Profil.objects.filter(status=1).order_by('-created_on')
         if search_query:
@@ -63,18 +66,22 @@ def homes(request):
             'reset_required': reset_requested,
         })
 
-    # ✅ Ne pas écraser le test ici
+    # Récupérer l'utilisateur connecté en sécurisant la requête
     utilisateur_connecte = Profil.objects.filter(id=user_id).first()
     if not utilisateur_connecte:
+        # Profil introuvable => supprimer session et rediriger vers login
         request.session.pop('user_id', None)
         messages.error(request, "Votre profil n'existe plus. Veuillez vous reconnecter.")
         return redirect('login_user')
 
+    # Récupérer les autres utilisateurs (hors utilisateur connecté)
     utilisateurs = Profil.objects.filter(status=1).exclude(id=user_id).order_by('-created_on')
 
+    # Nettoyer les stories expirées
     now = timezone.now()
     Story.objects.filter(expire_le__lt=now).delete()
 
+    # Récupérer la dernière story non expirée par auteur
     latest_stories = (
         Story.objects
         .filter(expire_le__gte=now)
@@ -87,9 +94,11 @@ def homes(request):
         date_creation__in=[item['latest_date'] for item in latest_stories]
     ).select_related('auteur')
 
+    # Appliquer recherche sur utilisateurs si besoin
     if search_query:
         utilisateurs = utilisateurs.filter(Q(nom__icontains=search_query) | Q(prenom__icontains=search_query))
 
+    # Compter les notifications non lues
     total_notices = utilisateur_connecte.notifications.filter(est_lue=False).count()
 
     return render(request, 'base.html', {
@@ -99,9 +108,8 @@ def homes(request):
         'search_query': search_query,
         'login_required': False,
         'reset_required': reset_requested,
-        "stories": story_queryset,
+        'stories': story_queryset,
     })
-
 
 
 def login_user(request):

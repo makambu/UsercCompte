@@ -137,14 +137,14 @@
 
   <!-- Redirection selon session -->
   <script>
-    setTimeout(function () {
+  setTimeout(function () {
     {% if user_id %}
       window.location.href = "{% url 'homes' %}";
-      {% else %}
+    {% else %}
       window.location.href = "{% url 'login_user' %}";
-      {% endif %}
-    }, 10000); // 10 secondes d'attente
-  </script>
+    {% endif %}
+  }, 5000);
+</script>
 
   <!-- test commit -->
 
