@@ -18,7 +18,6 @@ __pycache__/
 Thumbs.db
 
 # Éviter les fichiers lourds communs
-*.mp4
 *.webm
 *.avi
 *.mov
@@ -41,6 +40,7 @@ Thumbs.db
 node_modules/
 build/
 dist/
+staticfiles/
 
 *.pyc
 __pycache__/

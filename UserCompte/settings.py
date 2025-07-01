@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     'channels',
     'app_usercompte',
     'widget_tweaks',
+    'cloudinary',
+    'cloudinary_storage',
 ]
 
 MIDDLEWARE = [
@@ -91,6 +93,15 @@ DATABASES = {
         'PORT': config("DB_PORT", default=5432, cast=int),
     }
 }
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': config('CLOUDINARY_API_KEY'),
+    'API_SECRET': config('CLOUDINARY_API_SECRET')
+}
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
 
 # Validation des mots de passe
 AUTH_PASSWORD_VALIDATORS = [
