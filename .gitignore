@@ -3,9 +3,6 @@ venvUC/
 env/
 ENV/
 
-# Fichiers de base de données
-*.sqlite3
-*.db
 
 # Fichiers sensibles
 .env
@@ -26,8 +23,6 @@ Thumbs.db
 *.avi
 *.mov
 *.mkv
-*.jpg
-*.jpeg
 *.png
 *.gif
 *.bmp
@@ -49,5 +44,4 @@ dist/
 
 *.pyc
 __pycache__/
-db.sqlite3
 .env
