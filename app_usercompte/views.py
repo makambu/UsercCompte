@@ -61,24 +61,20 @@ def homes(request):
             'search_query': search_query,
             'login_required': True,
             'reset_required': reset_requested,
-    })
+        })
 
-    # Ajouter try ici 👇
-    try:
-        utilisateur_connecte = Profil.objects.get(id=user_id)
-    except Profil.DoesNotExist:
+    # ⚠️ Sécurisation : si le profil n'existe pas
+    utilisateur_connecte = Profil.objects.filter(id=user_id).first()
+    if not utilisateur_connecte:
         request.session.pop('user_id', None)
         messages.error(request, "Votre profil n'existe plus. Veuillez vous reconnecter.")
         return redirect('login_user')
 
-
-    utilisateur_connecte = Profil.objects.get(id=user_id)
     utilisateurs = Profil.objects.filter(status=1).exclude(id=user_id).order_by('-created_on')
 
     now = timezone.now()
+    Story.objects.filter(expire_le__lt=now).delete()
 
-    Story.objects.filter(expire_le__lt=timezone.now()).delete()
-        # Une seule story par auteur (la plus récente non expirée)
     latest_stories = (
         Story.objects
         .filter(expire_le__gte=now)
@@ -90,9 +86,6 @@ def homes(request):
         expire_le__gte=now,
         date_creation__in=[item['latest_date'] for item in latest_stories]
     ).select_related('auteur')
-
-    #now = timezone.now()
-    #stories = Story.objects.filter(expire_le__gte=now).order_by('-date_creation')
 
     if search_query:
         utilisateurs = utilisateurs.filter(Q(nom__icontains=search_query) | Q(prenom__icontains=search_query))
