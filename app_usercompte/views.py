@@ -61,7 +61,16 @@ def homes(request):
             'search_query': search_query,
             'login_required': True,
             'reset_required': reset_requested,
-        })
+    })
+
+    # Ajouter try ici 👇
+    try:
+        utilisateur_connecte = Profil.objects.get(id=user_id)
+    except Profil.DoesNotExist:
+        request.session.pop('user_id', None)
+        messages.error(request, "Votre profil n'existe plus. Veuillez vous reconnecter.")
+        return redirect('login_user')
+
 
     utilisateur_connecte = Profil.objects.get(id=user_id)
     utilisateurs = Profil.objects.filter(status=1).exclude(id=user_id).order_by('-created_on')
