@@ -3,6 +3,7 @@ from datetime import datetime
 from django.utils import timezone
 from datetime import timedelta
 from django.utils.text import slugify
+from cloudinary.models import CloudinaryField
 
 
 # Create your models here.
@@ -31,7 +32,7 @@ class Profil(models.Model):
     ville = models.CharField(max_length=100, null=True, blank=True)
     pays = models.CharField(max_length=100, blank=True)
     biographie = models.TextField(null=True, blank=True)
-    image_profil = models.ImageField(upload_to='profils/', blank=True, null=True)
+    image_profil = CloudinaryField('image', folder='profils/', blank=True, null=True)
     created_on = models.DateTimeField(auto_now_add=True)
     update_on = models.DateTimeField(auto_now=True)
     status = models.IntegerField(choices=STATUS, default=1)
@@ -50,8 +51,9 @@ class Profil(models.Model):
 
 class ImageHistorique(models.Model):
     profil = models.ForeignKey(Profil, on_delete=models.CASCADE, related_name="images_historiques")
-    image = models.ImageField(upload_to='historique_profils/')
+    image = CloudinaryField('image', folder='historique_profils/', blank=True, null=True)
     date_ajout = models.DateTimeField(auto_now_add=True)
+
 
     class Meta:
         ordering = ['-date_ajout']
@@ -102,7 +104,7 @@ class Blog(models.Model):
     auteur = models.ForeignKey('Profil', on_delete=models.CASCADE, related_name='blogs')
     titre = models.CharField(max_length=200)
     contenu = models.TextField()
-    image = models.ImageField(upload_to='blogs/', blank=True, null=True)
+    image = CloudinaryField('image', folder='blogs/', blank=True, null=True)
     statut = models.CharField(max_length=10, choices=STATUT_CHOICES, default='brouillon')
     slug = models.SlugField(unique=True, blank=True)
     date_creation = models.DateTimeField(auto_now_add=True)
@@ -148,7 +150,7 @@ class Notification(models.Model):
 class VideoPublier(models.Model):
     titre = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    fichier_video = models.FileField(upload_to='videos/')
+    fichier_video = CloudinaryField('video', folder='videos/', blank=True, null=True)
     auteur = models.ForeignKey(Profil, on_delete=models.CASCADE, related_name='videos')
     date_creation = models.DateTimeField(auto_now_add=True)
     likes = models.ManyToManyField(Profil, related_name='videos_aimees', blank=True)
@@ -196,7 +198,7 @@ class Message(models.Model):
     expediteur = models.ForeignKey(Profil, on_delete=models.CASCADE, related_name='messages_envoyes')
     destinataire = models.ForeignKey(Profil, on_delete=models.CASCADE, related_name='messages_recus')
     contenu = models.TextField(blank=True)
-    fichier = models.FileField(upload_to='chat_fichiers/', null=True, blank=True)
+    fichier = CloudinaryField('file', folder='chat_fichiers/', null=True, blank=True)
     date_envoi = models.DateTimeField(default=timezone.now)
     lu = models.BooleanField(default=False)
 
@@ -221,8 +223,8 @@ def get_expiration_date():
 
 class Story(models.Model):
     auteur = models.ForeignKey(Profil, on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='stories/images/', null=True, blank=True)
-    video = models.FileField(upload_to='stories/videos/', null=True, blank=True)
+    image = CloudinaryField('image', folder='stories/images/', null=True, blank=True)
+    video = CloudinaryField('video', folder='stories/videos/', null=True, blank=True)
     likes = models.ManyToManyField(Profil, related_name='story_likes', blank=True)
     date_creation = models.DateTimeField(auto_now_add=True)
     expire_le = models.DateTimeField(default=get_expiration_date)
