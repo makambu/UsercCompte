@@ -63,7 +63,7 @@ def homes(request):
             'reset_required': reset_requested,
         })
 
-    # ⚠️ Sécurisation : si le profil n'existe pas
+    # ✅ Ne pas écraser le test ici
     utilisateur_connecte = Profil.objects.filter(id=user_id).first()
     if not utilisateur_connecte:
         request.session.pop('user_id', None)
