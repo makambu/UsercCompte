@@ -30,7 +30,8 @@ from django.views.decorators.csrf import csrf_protect
 # Create your views here.
 
 def splash_view(request):
-    return render(request, 'includ/splash.html')
+    user_id = request.session.get("user_id")  # récupère l'ID de session s'il existe
+    return render(request, 'includ/splash.html', {"user_id": user_id})
 
 def homes(request):
     user_id = request.session.get('user_id')

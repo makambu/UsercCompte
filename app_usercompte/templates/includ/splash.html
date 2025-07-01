@@ -138,12 +138,12 @@
   <!-- Redirection selon session -->
   <script>
     setTimeout(function () {
-      {% if request.session.user_id %}
-        window.location.href = "{% url 'homes' %}";
+    {% if user_id %}
+      window.location.href = "{% url 'homes' %}";
       {% else %}
-        window.location.href = "{% url 'login_user' %}";
+      window.location.href = "{% url 'login_user' %}";
       {% endif %}
-    }, 10000); // après 5 secondes
+    }, 10000); // 10 secondes d'attente
   </script>
 
 
