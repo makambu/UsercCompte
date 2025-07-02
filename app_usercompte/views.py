@@ -1178,6 +1178,7 @@ def notifier_amis_story(utilisateur):
 
 
 
+@csrf_exempt
 def ajouter_story_ajax(request):
     user_id = request.session.get("user_id")
     if not user_id:
@@ -1186,28 +1187,35 @@ def ajouter_story_ajax(request):
     utilisateur = get_object_or_404(Profil, id=user_id)
 
     if request.method == "POST":
-        image = request.FILES.get("image")
-        video = request.FILES.get("video")
+        try:
+            if request.content_type == "application/json":
+                data = json.loads(request.body)
+                video_url = data.get("video_url")
 
-        if not image and not video:
-            return JsonResponse({"status": "error", "message": "Veuillez ajouter une image ou une vidéo."})
+                if video_url:
+                    Story.objects.create(
+                        auteur=utilisateur,
+                        video=video_url,
+                        expire_le=timezone.now() + timedelta(hours=24)
+                    )
+                    return JsonResponse({"status": "success", "message": "Story vidéo enregistrée."})
+                else:
+                    return JsonResponse({"status": "error", "message": "URL vidéo manquante."})
+            else:
+                image = request.FILES.get("image")
+                if image:
+                    Story.objects.create(
+                        auteur=utilisateur,
+                        image=image,
+                        expire_le=timezone.now() + timedelta(hours=24)
+                    )
+                    return JsonResponse({"status": "success", "message": "Story image enregistrée."})
+                else:
+                    return JsonResponse({"status": "error", "message": "Aucun fichier fourni."})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
 
-        Story.objects.create(
-            auteur=utilisateur,
-            image=image if image else None,
-            video=video if video else None,
-            expire_le=timezone.now() + timedelta(hours=24)
-        )
-
-        return JsonResponse({"status": "success", "message": "Story ajoutée avec succès."})
-
-    # En GET, retourne le formulaire HTML de la modale
-    html_form = render_to_string("story/ajouter_story.html", {
-        "utilisateur_connecte": utilisateur
-    }, request=request)
-
-    return JsonResponse({"status": "form", "html": html_form})
-
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"}, status=405)
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))

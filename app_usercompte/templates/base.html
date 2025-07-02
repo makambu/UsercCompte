@@ -716,32 +716,69 @@ function envoyerStoryDirect(input) {
 
   const fichier = input.files[0];
   const formData = new FormData();
-  formData.append(fichier.type.startsWith("image") ? "image" : "video", fichier);
+  const isVideo = fichier.type.startsWith("video");
 
-  fetch("{% url 'ajax_ajouter_story' %}", {
-    method: "POST",
-    headers: {
-      "X-CSRFToken": getCSRFToken()
-    },
-    body: formData
-  })
-  .then(res => res.json())
-  .then(data => {
-    if (data.status === "success") {
-      alert("Story ajoutée avec succès !");
-      location.reload(); // Recharge pour voir la nouvelle story
-    } else {
-      alert(data.message || "Erreur lors de l'ajout.");
-    }
-  })
-  .catch(error => {
-    console.error(error);
-    alert("Erreur réseau.");
-  });
+  if (isVideo) {
+    // Si c'est une vidéo, upload direct vers Cloudinary
+    formData.append("file", fichier);
+    formData.append("upload_preset", "story_direct_upload"); // Ton preset unsigned
+    formData.append("resource_type", "video");
 
-  // Réinitialiser input pour permettre un second envoi
-  input.value = "";
+    fetch("https://api.cloudinary.com/v1_1/dml7j5pjj/video/upload", {
+      method: "POST",
+      body: formData
+    })
+      .then(res => res.json())
+      .then(data => {
+        const videoUrl = data.secure_url;
+        // Maintenant tu envoies l'URL au backend Django pour l’enregistrer
+        return fetch("{% url 'ajax_ajouter_story' %}", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCSRFToken()
+          },
+          body: JSON.stringify({ video_url: videoUrl })
+        });
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "success") {
+          alert("Vidéo story ajoutée !");
+          location.reload();
+        } else {
+          alert(data.message || "Erreur lors de l'ajout.");
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Erreur lors de l'envoi vers Cloudinary.");
+      });
+  } else {
+    // Sinon, image → backend classique
+    formData.append("image", fichier);
+
+    fetch("{% url 'ajax_ajouter_story' %}", {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": getCSRFToken()
+      },
+      body: formData
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "success") {
+          alert("Image story ajoutée !");
+          location.reload();
+        } else {
+          alert(data.message || "Erreur lors de l'ajout.");
+        }
+      });
+  }
+
+  input.value = ""; // Reset
 }
+
 
 function getCSRFToken() {
   const name = 'csrftoken';

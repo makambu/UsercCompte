@@ -227,7 +227,7 @@ def get_expiration_date():
 class Story(models.Model):
     auteur = models.ForeignKey(Profil, on_delete=models.CASCADE)
     image = CloudinaryField('image', folder='stories/images/', null=True, blank=True)
-    video = CloudinaryField('video', folder='stories/videos/', null=True, blank=True)
+    video = CloudinaryField('video', folder='stories/videos/', resource_type='video', null=True, blank=True)
     likes = models.ManyToManyField(Profil, related_name='story_likes', blank=True)
     date_creation = models.DateTimeField(auto_now_add=True)
     expire_le = models.DateTimeField(default=get_expiration_date)
