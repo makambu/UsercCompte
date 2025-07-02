@@ -218,21 +218,28 @@ body {
       <div class="message {% if msg.expediteur == utilisateur_connecte %}envoye{% else %}recu{% endif %}">
         {% if msg.contenu %}<p>{{ msg.contenu|linebreaksbr }}</p>{% endif %}
         {% if msg.fichier %}
-        {% if msg.type_fichier == "image" %}
-        <img src="{{ msg.fichier.url }}" class="img-fluid rounded shadow" style="max-width: 250px;" alt="Image">
-        {% elif msg.type_fichier == "video" %}
-        <video controls class="rounded shadow" style="max-width: 300px;">
-          <source src="{{ msg.fichier.url }}">
-          Votre navigateur ne supporte pas la vidéo.
+        {% with url=msg.fichier.url %}
+        {% with ext=url|lower %}
+        {% if ext|contains:".jpg" or ext|contains:".jpeg" or ext|contains:".png" or ext|contains:".gif" %}
+        <img src="{{ url }}" alt="Image message" class="img-fluid rounded" style="max-width: 300px;">
+        {% elif ext|contains:".mp4" or ext|contains:".webm" %}
+        <video controls preload="metadata" style="max-width: 300px;">
+          <source src="{{ url }}">
         </video>
-        {% elif msg.type_fichier == "pdf" %}
-        <iframe src="{{ msg.fichier.url }}" width="100%" height="400px" class="rounded shadow"></iframe>
-        {% elif msg.type_fichier == "doc" or msg.type_fichier == "xls" %}
-        <iframe src="https://docs.google.com/gview?url={{ msg.fichier.url }}&embedded=true" width="100%" height="400px"
+        {% elif ext|contains:".mp3" or ext|contains:".wav" %}
+        <audio controls preload="metadata">
+          <source src="{{ url }}">
+        </audio>
+        {% elif ext|contains:".pdf" %}
+        <iframe src="https://docs.google.com/gview?url={{ url }}&embedded=true" style="width:100%; height:400px;"
           frameborder="0"></iframe>
         {% else %}
-        <a href="{{ msg.fichier.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">📎 Fichier joint</a>
+        <a href="{{ url }}" target="_blank" class="text-decoration-none btn btn-sm btn-outline-primary">
+          📎 Voir fichier
+        </a>
         {% endif %}
+        {% endwith %}
+        {% endwith %}
         {% endif %}
 
         <small>
