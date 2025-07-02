@@ -25,6 +25,7 @@ from django.template.loader import render_to_string
 from django.core.serializers import serialize
 from django.templatetags.static import static
 from django.views.decorators.csrf import csrf_protect
+import cloudinary
 
 
 # Create your views here.
