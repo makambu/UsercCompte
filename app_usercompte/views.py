@@ -994,28 +994,51 @@ def send_message_ajax(request):
         expediteur = get_object_or_404(Profil, id=expediteur_id)
         destinataire = get_object_or_404(Profil, id=destinataire_id)
 
-        uploaded_file_url = None
+        fichier_cloudinary = None
+        type_fichier = None
 
         if fichier:
             result = cloudinary.uploader.upload_large(
                 fichier,
-                resource_type="auto",  # permet images, vidéos, sons
+                resource_type="auto",
                 folder="chat_fichiers/"
             )
-            uploaded_file_url = result.get("secure_url")
+
+            public_id = result.get("public_id")
+            resource_type = result.get("resource_type")
+
+            # Reconstruire un objet compatible avec CloudinaryField
+            from cloudinary.models import CloudinaryResource
+            fichier_cloudinary = CloudinaryResource(public_id=public_id, resource_type=resource_type)
+
+            # Déduction du type fichier pour affichage dans le chat
+            content_type = fichier.content_type
+            if content_type.startswith("image"):
+                type_fichier = "image"
+            elif content_type.startswith("video"):
+                type_fichier = "video"
+            elif "pdf" in content_type:
+                type_fichier = "pdf"
+            elif "word" in content_type:
+                type_fichier = "doc"
+            elif "excel" in content_type or "sheet" in content_type:
+                type_fichier = "xls"
+            else:
+                type_fichier = "autre"
 
         msg = Message.objects.create(
             expediteur=expediteur,
             destinataire=destinataire,
             contenu=contenu,
-            fichier=uploaded_file_url  # on sauvegarde l'URL, ça marche avec CloudinaryField
+            fichier=fichier_cloudinary,
+            type_fichier=type_fichier
         )
 
         return JsonResponse({
             "status": "ok",
             "contenu": msg.contenu,
             "fichier_url": msg.fichier.url if msg.fichier else "",
-            "fichier_nom": msg.fichier.name if msg.fichier else "",
+            "type_fichier": msg.type_fichier
         })
 
     return JsonResponse({"status": "error"})

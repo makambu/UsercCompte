@@ -218,18 +218,23 @@ body {
       <div class="message {% if msg.expediteur == utilisateur_connecte %}envoye{% else %}recu{% endif %}">
         {% if msg.contenu %}<p>{{ msg.contenu|linebreaksbr }}</p>{% endif %}
         {% if msg.fichier %}
-          {% with ext=msg.fichier.name|lower %}
-            {% if ext|endswith:".jpg" or ext|endswith:".jpeg" or ext|endswith:".png" or ext|endswith:".gif" %}
-              <img src="{{ msg.fichier.url }}" alt="Image message">
-            {% elif ext|endswith:".mp4" or ext|endswith:".webm" %}
-              <video controls preload="metadata"><source src="{{ msg.fichier.url }}"></video>
-            {% elif ext|endswith:".mp3" or ext|endswith:".wav" %}
-              <audio controls preload="metadata"><source src="{{ msg.fichier.url }}"></audio>
-            {% else %}
-              <a href="{{ msg.fichier.url }}" target="_blank" class="text-decoration-none">📎 {{ msg.fichier.name|basename }}</a>
-            {% endif %}
-          {% endwith %}
+        {% if msg.type_fichier == "image" %}
+        <img src="{{ msg.fichier.url }}" class="img-fluid rounded shadow" style="max-width: 250px;" alt="Image">
+        {% elif msg.type_fichier == "video" %}
+        <video controls class="rounded shadow" style="max-width: 300px;">
+          <source src="{{ msg.fichier.url }}">
+          Votre navigateur ne supporte pas la vidéo.
+        </video>
+        {% elif msg.type_fichier == "pdf" %}
+        <iframe src="{{ msg.fichier.url }}" width="100%" height="400px" class="rounded shadow"></iframe>
+        {% elif msg.type_fichier == "doc" or msg.type_fichier == "xls" %}
+        <iframe src="https://docs.google.com/gview?url={{ msg.fichier.url }}&embedded=true" width="100%" height="400px"
+          frameborder="0"></iframe>
+        {% else %}
+        <a href="{{ msg.fichier.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">📎 Fichier joint</a>
         {% endif %}
+        {% endif %}
+
         <small>
           {% if msg.expediteur == utilisateur_connecte %}Moi{% else %}{{ msg.expediteur.nom }}{% endif %}
           • {{ msg.date_envoi|date:"d/m/Y H:i" }}

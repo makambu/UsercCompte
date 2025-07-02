@@ -202,11 +202,13 @@ class Message(models.Model):
     destinataire = models.ForeignKey(Profil, on_delete=models.CASCADE, related_name='messages_recus')
     contenu = models.TextField(blank=True)
     fichier = CloudinaryField('file', folder='chat_fichiers/', null=True, blank=True)
+    type_fichier = models.CharField(max_length=10, null=True, blank=True)  # "image", "video", "pdf", etc.
     date_envoi = models.DateTimeField(default=timezone.now)
     lu = models.BooleanField(default=False)
 
     def __str__(self):
         return f"De {self.expediteur} à {self.destinataire}"
+
 
 
 class MessageIA(models.Model):
