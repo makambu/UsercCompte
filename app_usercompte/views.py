@@ -214,7 +214,7 @@ def reset_password_home(request):
         
 
 
-@csrf_exempt
+@csrf_protect
 def MyProfil(request):
     user_id = request.session.get('user_id')
     if not user_id:
@@ -228,7 +228,7 @@ def MyProfil(request):
     form_blog = BlogForm()
     form_video = VideoForm()
 
-    # Requête AJAX pour modification du profil
+    # AJAX pour modifier le profil
     if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
         form = ProfilUpdateForm(request.POST, request.FILES, instance=user_profil)
         if form.is_valid():
@@ -250,7 +250,10 @@ def MyProfil(request):
                     if ancienne_image:
                         ImageHistorique.objects.create(profil=user_profil, image=ancienne_image)
                 form.save()
+                messages.success(request, "Profil mis à jour.")
                 return redirect('myProfil')
+            else:
+                messages.error(request, "Erreur lors de la mise à jour du profil.")
 
         elif 'blog_submit' in request.POST:
             form_blog = BlogForm(request.POST, request.FILES)
@@ -260,6 +263,8 @@ def MyProfil(request):
                 blog.save()
                 messages.success(request, "Blog publié avec succès.")
                 return redirect('myProfil')
+            else:
+                messages.error(request, "Erreur dans le formulaire du blog.")
 
         elif 'video_submit' in request.POST:
             form_video = VideoForm(request.POST, request.FILES)
@@ -269,23 +274,18 @@ def MyProfil(request):
                 video.save()
                 messages.success(request, "🎥 Vidéo publiée avec succès.")
                 return redirect('myProfil')
+            else:
+                messages.error(request, "Erreur dans le formulaire vidéo : " + str(form_video.errors))
 
+    # Traitement des autres données
     blogs_user = Blog.objects.filter(auteur=user_profil).order_by('-date_creation')
     form_modifications = {blog.id: BlogFormUpdate(instance=blog) for blog in blogs_user}
 
-    # Pagination des anciennes images
-    historiques = ImageHistorique.objects.filter(profil=user_profil)
-    paginator = Paginator(historiques, 4)
-    page = request.GET.get('page_img')
-    historiques_page = paginator.get_page(page)
-
-    # Après ta pagination :
     historiques = ImageHistorique.objects.filter(profil=user_profil).order_by('-date_ajout')
     paginator = Paginator(historiques, 4)
     page = request.GET.get('page_img')
     historiques_page = paginator.get_page(page)
 
-    # Construction du carrousel : actuelle + anciennes (ordonnées)
     all_images = list(historiques)
     if user_profil.image_profil:
         all_images.insert(0, type('Obj', (object,), {'image': user_profil.image_profil, 'date_ajout': user_profil.update_on}))
@@ -300,9 +300,10 @@ def MyProfil(request):
         'likers': likers,
         'blogs_user': blogs_user,
         'form_modifications': form_modifications,
-        'images_historiques': historiques_page,  # pour la pagination classique
-        'all_images_profil': all_images,         # pour le carrousel dynamique
+        'images_historiques': historiques_page,
+        'all_images_profil': all_images,
     })
+
 
 
 
@@ -680,7 +681,7 @@ def liste_videos(request):
     search_query = request.GET.get('search', '')
 
     # Chargement initial avec relations
-    videos = VideoPublier.objects.prefetch_related('likes', 'commentaires').order_by('-date_creation')
+    videos = VideoPublier.objects.prefetch_related('likes', 'commentaires').order_by('-likes')
 
     # Recherche
     if search_query:

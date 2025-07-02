@@ -133,10 +133,13 @@ class VideoForm(forms.ModelForm):
         }
 
     def clean_fichier_video(self):
-        fichier = self.cleaned_data.get('fichier_video')
-        if fichier and not fichier.content_type.startswith('video'):
-            raise forms.ValidationError("Veuillez inserer un fichier vidéo uniquement.")
-        return fichier
+        video = self.cleaned_data.get('fichier_video')
+        if video:
+            if not video.content_type.startswith('video'):
+                raise forms.ValidationError("Veuillez insérer un fichier vidéo uniquement.")
+            if video.size > 100 * 1024 * 1024:  # 100 Mo max
+                raise forms.ValidationError("La vidéo ne doit pas dépasser 100 Mo.")
+        return video
 
 
 
