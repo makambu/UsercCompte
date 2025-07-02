@@ -6,6 +6,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
 from django.core.files.base import ContentFile
 from app_usercompte.models import Profil, Message
+import cloudinary
 
 logger = logging.getLogger(__name__)
 
@@ -81,15 +82,28 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 }
             )
 
-        # ✅ Message fichier
+        # Message fichier
         elif "file" in data:
             try:
-                saved_file = decode_base64_file(data["file"], data["file_name"])
+                decoded_file = decode_base64_file(data["file"], data["file_name"])
+
+                # Upload vers Cloudinary
+                upload_result = await sync_to_async(cloudinary.uploader.upload)(
+                    decoded_file,
+                    folder="chat_fichiers/",
+                    resource_type="auto"
+                )
+
+                file_url = upload_result.get("secure_url")
+                file_name = upload_result.get("original_filename") + '.' + upload_result.get("format")
+                file_ext = upload_result.get("format")
+
                 msg = await sync_to_async(Message.objects.create)(
                     expediteur=expediteur,
                     destinataire=destinataire,
-                    fichier=saved_file
+                    fichier=file_url  # ⚠️ Important : tu enregistres ici l'URL (CloudinaryField accepte)
                 )
+
                 await self.channel_layer.group_send(
                     self.room_group_name,
                     {
@@ -97,11 +111,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         "message": "",
                         "expediteur": expediteur_nom,
                         "expediteur_id": expediteur_id,
-                        "file_url": msg.fichier.url,
-                        "file_name": msg.fichier.name,
-                        "file_ext": msg.fichier.name.split('.')[-1],
+                        "file_url": file_url,
+                        "file_name": file_name,
+                        "file_ext": file_ext,
                     }
                 )
+
+                # Notification
                 await self.channel_layer.group_send(
                     f"notif_{destinataire_id}",
                     {
@@ -109,10 +125,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         "from_id": expediteur_id
                     }
                 )
+
             except Exception as e:
                 logger.error(f"[FILE ERROR] {str(e)}")
 
-        # ✅ Appel vocal - démarrage
+
+        # Appel vocal - démarrage
         elif data.get("type") == "call_start":
             await self.channel_layer.group_send(
                 f"notif_{destinataire_id}",
@@ -123,7 +141,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 }
             )
 
-        # ✅ Appel - réponse
+        # Appel - réponse
         elif data.get("type") == "call_answer":
             await self.channel_layer.group_send(
                 self.room_group_name,
@@ -134,7 +152,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 }
             )
 
-        # ✅ Appel - fin
+        # Appel - fin
         elif data.get("type") == "call_end":
             await self.channel_layer.group_send(
                 self.room_group_name,
@@ -144,7 +162,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 }
             )
 
-        # ✅ Appel manqué
+        # Appel manqué
         elif data.get("type") == "call_missed":
             await sync_to_async(Message.objects.create)(
                 expediteur=expediteur,
@@ -152,7 +170,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 contenu=f"📞 Appel en absence de {expediteur.nom}"
             )
 
-    # 🔽 Envois WebSocket client (Chat)
+    # Envois WebSocket client (Chat)
     async def chat_message(self, event):
         await self.send(text_data=json.dumps(event))
 
