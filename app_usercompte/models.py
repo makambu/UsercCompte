@@ -150,7 +150,9 @@ class Notification(models.Model):
 class VideoPublier(models.Model):
     titre = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    fichier_video = CloudinaryField('video', folder='videos/', blank=True, null=True)
+    fichier_video = CloudinaryField(
+        'video', folder='videos/', upload_preset='video_large', blank=True, null=True
+    )
     auteur = models.ForeignKey(Profil, on_delete=models.CASCADE, related_name='videos')
     date_creation = models.DateTimeField(auto_now_add=True)
     likes = models.ManyToManyField(Profil, related_name='videos_aimees', blank=True)
@@ -161,6 +163,7 @@ class VideoPublier(models.Model):
 
     def nombre_likes(self):
         return self.likes.count()
+
     
 
 class CommentaireVideo(models.Model):

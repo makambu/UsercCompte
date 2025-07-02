@@ -267,15 +267,22 @@ def MyProfil(request):
                 messages.error(request, "Erreur dans le formulaire du blog.")
 
         elif 'video_submit' in request.POST:
-            form_video = VideoForm(request.POST, request.FILES)
+            form_video = VideoForm(request.POST)
             if form_video.is_valid():
-                video = form_video.save(commit=False)
-                video.auteur = user_profil
-                video.save()
-                messages.success(request, "🎥 Vidéo publiée avec succès.")
+                url = form_video.cleaned_data.get('cloudinary_url')
+                if url:
+                    video = VideoPublier.objects.create(
+                    titre=form_video.cleaned_data['titre'],
+                    description=form_video.cleaned_data['description'],
+                    fichier_video=url,  # l’URL Cloudinary est stockée ici
+                    auteur=user_profil
+                    )
+                    messages.success(request, "🎥 Vidéo uploadée avec succès.")
+                else:
+                    messages.error(request, "Veuillez uploader une vidéo via le bouton prévu.")
                 return redirect('myProfil')
             else:
-                messages.error(request, "Erreur dans le formulaire vidéo : " + str(form_video.errors))
+                messages.error(request, "Erreur dans le formulaire vidéo.")
 
     # Traitement des autres données
     blogs_user = Blog.objects.filter(auteur=user_profil).order_by('-date_creation')

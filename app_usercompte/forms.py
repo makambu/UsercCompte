@@ -112,34 +112,16 @@ class BlogFormUpdate(forms.ModelForm):
         fields = ['titre', 'image', 'contenu', 'statut']
 
 class VideoForm(forms.ModelForm):
+    cloudinary_url = forms.URLField(widget=forms.HiddenInput(), required=False)
+
     class Meta:
         model = VideoPublier
-        fields = ['titre', 'description', 'fichier_video']
-        widgets = {
-            'titre': forms.TextInput(attrs={
-                'placeholder': 'Entrer le titre de la vidéo',
-                'class': 'form-control'
-            }),
-            'description': forms.Textarea(attrs={
-                'placeholder': 'Ajoutez une description claire de la vidéo...',
-                'class': 'form-control',
-                'rows': 3,
-            }),
-            'fichier_video': forms.ClearableFileInput(attrs={
-                'accept': 'video/*',
-                'onchange': 'previewVideo(event)',
-                'class': 'form-control'
-            }),
-        }
+        fields = ['titre', 'description']  # on ne gère plus fichier_video directement
 
-    def clean_fichier_video(self):
-        video = self.cleaned_data.get('fichier_video')
-        if video:
-            if not video.content_type.startswith('video'):
-                raise forms.ValidationError("Veuillez insérer un fichier vidéo uniquement.")
-            if video.size > 100 * 1024 * 1024:  # 100 Mo max
-                raise forms.ValidationError("La vidéo ne doit pas dépasser 100 Mo.")
-        return video
+        widgets = {
+            'titre': forms.TextInput(attrs={'placeholder': 'Entrer le titre de la vidéo', 'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'placeholder': 'Ajoutez une description claire de la vidéo...', 'class': 'form-control', 'rows': 3}),
+        }
 
 
 
