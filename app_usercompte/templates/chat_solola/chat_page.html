@@ -218,29 +218,24 @@ body {
       <div class="message {% if msg.expediteur == utilisateur_connecte %}envoye{% else %}recu{% endif %}">
         {% if msg.contenu %}<p>{{ msg.contenu|linebreaksbr }}</p>{% endif %}
         {% if msg.fichier %}
-        {% with url=msg.fichier.url %}
-        {% with ext=url|lower %}
-        {% if ext|contains:".jpg" or ext|contains:".jpeg" or ext|contains:".png" or ext|contains:".gif" %}
-        <img src="{{ url }}" alt="Image message" class="img-fluid rounded" style="max-width: 300px;">
-        {% elif ext|contains:".mp4" or ext|contains:".webm" %}
-        <video controls preload="metadata" style="max-width: 300px;">
-          <source src="{{ url }}">
-        </video>
-        {% elif ext|contains:".mp3" or ext|contains:".wav" %}
-        <audio controls preload="metadata">
-          <source src="{{ url }}">
+        {% with ext=msg.fichier.name|lower %}
+        {% if ".jpg" in ext or ".jpeg" in ext or ".png" in ext or ".gif" in ext %}
+        <img src="{{ msg.fichier.url }}" class="img-fluid" alt="Image">
+        {% elif ".mp4" in ext or ".webm" in ext %}
+        <video src="{{ msg.fichier.url }}" controls class="w-100"></video>
+        {% elif ".mp3" in ext or ".wav" in ext %}
+        <audio controls>
+          <source src="{{ msg.fichier.url }}">
         </audio>
-        {% elif ext|contains:".pdf" %}
-        <iframe src="https://docs.google.com/gview?url={{ url }}&embedded=true" style="width:100%; height:400px;"
+        {% elif ".pdf" in ext %}
+        <iframe src="https://docs.google.com/gview?url={{ msg.fichier.url }}&embedded=true" style="width:100%; height:400px;"
           frameborder="0"></iframe>
         {% else %}
-        <a href="{{ url }}" target="_blank" class="text-decoration-none btn btn-sm btn-outline-primary">
-          📎 Voir fichier
-        </a>
+        <a href="{{ msg.fichier.url }}" target="_blank" class="btn btn-outline-secondary">📁 Voir le fichier</a>
         {% endif %}
         {% endwith %}
-        {% endwith %}
         {% endif %}
+
 
         <small>
           {% if msg.expediteur == utilisateur_connecte %}Moi{% else %}{{ msg.expediteur.nom }}{% endif %}
