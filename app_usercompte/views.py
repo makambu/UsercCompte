@@ -993,11 +993,21 @@ def send_message_ajax(request):
         expediteur = get_object_or_404(Profil, id=expediteur_id)
         destinataire = get_object_or_404(Profil, id=destinataire_id)
 
+        uploaded_file_url = None
+
+        if fichier:
+            result = cloudinary.uploader.upload_large(
+                fichier,
+                resource_type="auto",  # permet images, vidéos, sons
+                folder="chat_fichiers/"
+            )
+            uploaded_file_url = result.get("secure_url")
+
         msg = Message.objects.create(
             expediteur=expediteur,
             destinataire=destinataire,
             contenu=contenu,
-            fichier=fichier
+            fichier=uploaded_file_url  # on sauvegarde l'URL, ça marche avec CloudinaryField
         )
 
         return JsonResponse({
@@ -1008,7 +1018,6 @@ def send_message_ajax(request):
         })
 
     return JsonResponse({"status": "error"})
-
 
 def liste_conversations(request):
     user_id = request.session.get("user_id")
