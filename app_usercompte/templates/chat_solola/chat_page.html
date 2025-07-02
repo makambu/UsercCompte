@@ -220,18 +220,27 @@ body {
         {% if msg.fichier %}
         {% with ext=msg.fichier.name|lower %}
         {% if ".jpg" in ext or ".jpeg" in ext or ".png" in ext or ".gif" in ext %}
-        <img src="{{ msg.fichier.url }}" class="img-fluid" alt="Image">
+        <img src="{{ msg.fichier.url }}" class="img-fluid rounded" alt="Image" style="max-width:100%; max-height:300px;">
+        <br><a href="{{ msg.fichier.url }}" download class="btn btn-sm btn-outline-primary mt-1">📥 Télécharger</a>
         {% elif ".mp4" in ext or ".webm" in ext %}
-        <video src="{{ msg.fichier.url }}" controls class="w-100"></video>
+        <video src="{{ msg.fichier.url }}" controls style="width:100%; max-height:400px;"></video>
+        <br><a href="{{ msg.fichier.url }}" download class="btn btn-sm btn-outline-primary mt-1">📥 Télécharger</a>
         {% elif ".mp3" in ext or ".wav" in ext %}
-        <audio controls>
+        <audio controls style="width:100%">
           <source src="{{ msg.fichier.url }}">
         </audio>
+        <br><a href="{{ msg.fichier.url }}" download class="btn btn-sm btn-outline-primary mt-1">📥 Télécharger</a>
         {% elif ".pdf" in ext %}
         <iframe src="https://docs.google.com/gview?url={{ msg.fichier.url }}&embedded=true" style="width:100%; height:400px;"
           frameborder="0"></iframe>
+        <br><a href="{{ msg.fichier.url }}" download class="btn btn-sm btn-outline-primary mt-1">📥 Télécharger</a>
+        {% elif ".doc" in ext or ".docx" in ext or ".xls" in ext or ".xlsx" in ext or ".ppt" in ext or ".pptx" in ext %}
+        <iframe src="https://view.officeapps.live.com/op/embed.aspx?src={{ msg.fichier.url }}" style="width:100%; height:400px;"
+          frameborder="0"></iframe>
+        <br><a href="{{ msg.fichier.url }}" download class="btn btn-sm btn-outline-primary mt-1">📥 Télécharger</a>
         {% else %}
         <a href="{{ msg.fichier.url }}" target="_blank" class="btn btn-outline-secondary">📁 Voir le fichier</a>
+        <a href="{{ msg.fichier.url }}" download class="btn btn-sm btn-outline-primary mt-1">📥 Télécharger</a>
         {% endif %}
         {% endwith %}
         {% endif %}
@@ -431,19 +440,30 @@ notifSocket.onclose = function () {
 
     let contenu = "";
     if (data.message) contenu += `<p>${data.message}</p>`;
-
     if (data.file_url) {
       const ext = data.file_ext.toLowerCase();
       if (["jpg", "jpeg", "png", "gif"].includes(ext)) {
-        contenu += `<img src="${data.file_url}" alt="image">`;
+        contenu += `<img src="${data.file_url}" alt="Image" style="max-width:100%; max-height:300px;"><br>`;
+        contenu += `<a href="${data.file_url}" download class="btn btn-sm btn-outline-primary mt-1">📥 Télécharger</a>`;
       } else if (["mp4", "webm"].includes(ext)) {
-        contenu += `<video controls><source src="${data.file_url}"></video>`;
-      } else if (["mp3", "wav", "webm"].includes(ext)) {
-        contenu += `<audio controls><source src="${data.file_url}"></audio>`;
+        contenu += `<video controls style="width:100%; max-height:400px;"><source src="${data.file_url}"></video><br>`;
+        contenu += `<a href="${data.file_url}" download class="btn btn-sm btn-outline-primary mt-1">📥 Télécharger</a>`;
+      } else if (["mp3", "wav"].includes(ext)) {
+        contenu += `<audio controls style="width:100%;"><source src="${data.file_url}"></audio><br>`;
+        contenu += `<a href="${data.file_url}" download class="btn btn-sm btn-outline-primary mt-1">📥 Télécharger</a>`;
+      } else if (["pdf"].includes(ext)) {
+        contenu += `<iframe src="https://docs.google.com/gview?url=${data.file_url}&embedded=true" style="width:100%; height:400px;" frameborder="0"></iframe><br>`;
+        contenu += `<a href="${data.file_url}" download class="btn btn-sm btn-outline-primary mt-1">📥 Télécharger</a>`;
+      } else if (["doc", "docx", "xls", "xlsx", "ppt", "pptx"].includes(ext)) {
+        contenu += `<iframe src="https://view.officeapps.live.com/op/embed.aspx?src=${data.file_url}" style="width:100%; height:400px;" frameborder="0"></iframe><br>`;
+        contenu += `<a href="${data.file_url}" download class="btn btn-sm btn-outline-primary mt-1">📥 Télécharger</a>`;
       } else {
-        contenu += `<a href="${data.file_url}" target="_blank">📎 ${data.file_name}</a>`;
+        contenu += `<a href="${data.file_url}" target="_blank" class="btn btn-outline-secondary">📁 Voir le fichier</a><br>`;
+        contenu += `<a href="${data.file_url}" download class="btn btn-sm btn-outline-primary mt-1">📥 Télécharger</a>`;
       }
+
     }
+
 
     contenu += `<small>${data.expediteur_id == expediteurId ? "Moi" : data.expediteur} • Maintenant</small>`;
     div.innerHTML = contenu;
