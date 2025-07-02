@@ -689,7 +689,7 @@ def liste_videos(request):
     search_query = request.GET.get('search', '')
 
     # Chargement initial avec relations
-    videos = VideoPublier.objects.prefetch_related('likes', 'commentaires').order_by('-likes')
+    videos = VideoPublier.objects.prefetch_related('likes', 'commentaires').order_by('-date_creation')
 
     # Recherche
     if search_query:
