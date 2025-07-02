@@ -50,7 +50,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'app_usercompte.middleware.UpdateLastConnectionMiddleware'
+    'app_usercompte.middleware.UpdateLastConnectionMiddleware',
+    'app_usercompte.middleware.InvalidUserSessionMiddleware', 
 ]
 
 ROOT_URLCONF = 'UserCompte.urls'

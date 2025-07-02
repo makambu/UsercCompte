@@ -30,8 +30,18 @@ from django.views.decorators.csrf import csrf_protect
 # Create your views here.
 
 def splash_view(request):
-    user_id = request.session.get("user_id")  # récupère l'ID de session s'il existe
-    return render(request, 'includ/splash.html', {"user_id": user_id})
+    user_id = request.session.get('user_id')
+
+    if user_id:
+        utilisateur = Profil.objects.filter(id=user_id).first()
+        if utilisateur:
+            return redirect('homes')  # ou autre vue principale
+        else:
+            # Supprime la session invalide
+            request.session.flush()
+            messages.error(request, "Votre compte a été supprimé. Veuillez vous reconnecter.")
+            return redirect('login_user')
+    return render(request, 'includ/splash.html')
 
 
 def homes(request):
@@ -69,9 +79,8 @@ def homes(request):
     # Récupérer l'utilisateur connecté en sécurisant la requête
     utilisateur_connecte = Profil.objects.filter(id=user_id).first()
     if not utilisateur_connecte:
-        # Profil introuvable => supprimer session et rediriger vers login
-        request.session.pop('user_id', None)
-        messages.error(request, "Votre profil n'existe plus. Veuillez vous reconnecter.")
+        request.session.flush()
+        messages.error(request, "Votre compte a été supprimé. Veuillez vous reconnecter.")
         return redirect('login_user')
 
     # Récupérer les autres utilisateurs (hors utilisateur connecté)
