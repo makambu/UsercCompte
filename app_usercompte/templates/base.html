@@ -570,7 +570,7 @@ function showStory() {
   if (story.type === "image") {
     content = `<img src="${story.media_url}" class="w-100" style="max-height:500px; object-fit:contain;">`;
   } else if (story.type === "video") {
-    content = `<video id="storyVideo" class="w-100" style="max-height:500px;" autoplay controls>
+    content = `<video id="storyVideo" class="w-100" style="max-height:500px;" autoplay muted  controls>
                  <source src="${story.media_url}" type="video/mp4">
                </video>`;
   }

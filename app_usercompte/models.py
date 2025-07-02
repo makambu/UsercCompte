@@ -243,10 +243,10 @@ class Story(models.Model):
         return ""
 
     def get_type(self):
-        if self.image:
-            return "image"
-        elif self.video:
+        if self.video:
             return "video"
+        elif self.image:
+            return "image"
         return "unknown"
 
 
