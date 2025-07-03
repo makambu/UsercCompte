@@ -341,6 +341,12 @@ body {
 <audio id="ringtone" src="{% static 'sounds/ringtone.mp3' %}" preload="auto"></audio>
 
 <script>
+    document.addEventListener("click", () => {
+      const son = document.getElementById("ringtone");
+      if (son) son.play().then(() => son.pause()).catch(() => { });
+    }, { once: true });
+
+
   let sonnerieTimeout = null;
     const son = document.getElementById("ringtone");
 
@@ -393,7 +399,7 @@ body {
 
     if (data.type === "remove_message_notification") {
       mettreAJourBadgeSolola(null);
-      arreterSonnerie(); // ✅ Si on lit depuis une autre page
+      arreterSonnerie(); // Si on lit depuis une autre page
     }
   };
 
@@ -417,26 +423,18 @@ body {
       });
   }
 
-  function mettreAJourBadgeSolola(nb = null) {
+ function mettreAJourBadgeSolola(nb = null) {
     const badge = document.getElementById("sololaBadge");
     const count = document.getElementById("sololaCount");
-
-    if (data.nb > 0) {
-      badge.classList.remove("d-none");
-      badge.classList.add("clignote");
-      count.textContent = data.nb;
-    } else {
-      badge.classList.add("d-none");
-      badge.classList.remove("clignote");
-      count.textContent = "0";
-    }
 
     if (nb !== null) {
       if (nb > 0) {
         badge.classList.remove("d-none");
+        badge.classList.add("clignote");
         count.textContent = nb;
       } else {
         badge.classList.add("d-none");
+        badge.classList.remove("clignote");
         count.textContent = "0";
       }
     } else {
@@ -445,15 +443,16 @@ body {
         .then(data => {
           if (data.nb > 0) {
             badge.classList.remove("d-none");
+            badge.classList.add("clignote");
             count.textContent = data.nb;
           } else {
             badge.classList.add("d-none");
+            badge.classList.remove("clignote");
             count.textContent = "0";
           }
         });
     }
   }
-
   setInterval(verifierMessagesNonLus, 30000); // toutes les 30s
   setInterval(() => mettreAJourBadgeSolola(null), 15000); // toutes les 15s fallback
 
