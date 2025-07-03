@@ -523,46 +523,54 @@ function logoutUser() {
     }
 }
 
-// Réinitialiser timer d'inactivité
+</script>
+
+<script>
+let inactivityTimeout = null;
+let isRefreshing = false; // Utilisé pour différencier un rafraîchissement d'une vraie fermeture
+
+// --- Déconnexion AJAX ---
+function logoutUser() {
+    navigator.sendBeacon("{% url 'logout_ajax' %}");
+}
+
+// --- Timer d'inactivité (30 minutes) ---
 function resetInactivityTimer() {
     if (inactivityTimeout) clearTimeout(inactivityTimeout);
+
     inactivityTimeout = setTimeout(() => {
         logoutUser();
-        // Optionnel : Rediriger vers la page login
+        // Redirection après déconnexion
         window.location.href = "{% url 'login_user' %}";
     }, 30 * 60 * 1000); // 30 minutes
 }
 
-// Ecouter les interactions utilisateur
+// --- Réinitialiser le timer sur interaction ---
 ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'].forEach(event => {
     window.addEventListener(event, resetInactivityTimer);
 });
 
-// Initialiser timer au chargement
+// --- Lancer le timer au démarrage ---
 resetInactivityTimer();
 
 
-// Différencier fermeture onglet vs actualisation avec pagehide & visibilitychange
-let isRefresh = false;
+// ============================
+// 🔒 Gestion fermeture / refresh
+// ============================
 
-// Lorsque page devient invisible, on met un flag temporaire
-document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-        isRefresh = true;
-    } else {
-        isRefresh = false;
-    }
+// Marque un refresh pour éviter la déconnexion
+window.addEventListener("beforeunload", () => {
+    isRefreshing = true;
 });
 
-// Lors du unload, si c'est pas un refresh, on logout
-window.addEventListener('pagehide', (event) => {
-    // pagehide est appelé aussi lors du rafraîchissement, on essaie d'écarter ce cas
-    if (!isRefresh) {
+// Si ce n’est pas un refresh => déconnexion
+window.addEventListener("pagehide", (event) => {
+    if (!isRefreshing) {
         logoutUser();
     }
 });
-
 </script>
+
 
 
 <script>
