@@ -195,6 +195,11 @@
     .catch(() => alert("Erreur réseau."));
   };
 
+   // ⛳️ Ajoute ce bloc pour que le onclick fonctionne
+window.gererInvitation = function(id, action) {
+  repondreInvitation(id, action === 'accepter');
+};
+
   function getCookie(name) {
     let cookieValue = null;
     if (document.cookie) {
@@ -209,10 +214,6 @@
     }
     return cookieValue;
   }
-  // ⛳️ Ajoute ce bloc pour que le onclick fonctionne
-window.gererInvitation = function(id, action) {
-  repondreInvitation(id, action === 'accepter');
-};
 </script>
 
 
