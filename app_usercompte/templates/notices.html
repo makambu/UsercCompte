@@ -114,7 +114,7 @@
 
   notifSocket.onmessage = (e) => {
     const data = JSON.parse(e.data);
-    console.log("📩 Notification WS reçue :", data);
+    console.log("📩 WS reçue :", data);
 
     if (data.type === "invitation_ami") {
       ajouterNotificationInvitation(data.invitation);
@@ -123,90 +123,85 @@
     }
   };
 
-  function ajouterNotificationInvitation(invitation) {
-    const notificationsList = document.getElementById('notifications-list');
-    if (!notificationsList) return;
+  function ajouterNotificationInvitation(inv) {
+    const list = document.getElementById('notifications-list');
+    if (!list) return;
 
-    if (document.querySelector(`.card[data-notif-id="inv_${invitation.id}"]`)) return;
+    if (document.querySelector(`[data-notif-id="inv_${inv.id}"]`)) return;
 
-    const imgSrc = invitation.emetteur.image || "{% static 'images/image_4.png' %}";
-    const nom = invitation.emetteur.nom || "Utilisateur";
-    const profilUrl = `/profil/${invitation.emetteur.id}/`;
+    const img = inv.emetteur.image || "{% static 'images/image_4.png' %}";
+    const nom = inv.emetteur.nom || "Utilisateur";
+    const url = `/profil/${inv.emetteur.id}/`;
 
-    const cardHTML = `
-      <div class="card shadow-sm mb-3" data-notif-id="inv_${invitation.id}">
+    const html = `
+      <div class="card shadow-sm mb-3" data-notif-id="inv_${inv.id}">
         <div class="card-body d-flex align-items-center">
-          <a href="${profilUrl}">
-            <img src="${imgSrc}" class="rounded-circle me-3" width="50" height="50" alt="Image profil">
+          <a href="${url}">
+            <img src="${img}" class="rounded-circle me-3" width="50" height="50">
           </a>
           <div class="flex-grow-1">
             <p class="mb-1">
-              <strong><a href="${profilUrl}">${nom}</a></strong> vous a envoyé une invitation d’amitié.
+              <strong><a href="${url}">${nom}</a></strong> vous a envoyé une invitation d’amitié.
             </p>
-            <small class="text-muted">${new Date(invitation.date_envoi).toLocaleString()}</small>
+            <small class="text-muted">${new Date(inv.date_envoi).toLocaleString()}</small>
           </div>
           <div>
-            <button class="btn btn-success btn-sm me-2" onclick="gererInvitation(${invitation.id}, 'accepter')">Accepter</button>
-            <button class="btn btn-danger btn-sm" onclick="gererInvitation(${invitation.id}, 'refuser')">Refuser</button>
+            <button onclick="gererInvitation(${inv.id}, 'accepter')" class="btn btn-success btn-sm me-2">Accepter</button>
+            <button onclick="gererInvitation(${inv.id}, 'refuser')" class="btn btn-danger btn-sm">Refuser</button>
           </div>
         </div>
       </div>`;
     
-    notificationsList.insertAdjacentHTML('afterbegin', cardHTML);
+    list.insertAdjacentHTML("afterbegin", html);
   }
 
-  function mettreAJourNotificationInvitation(invitation_id, statut) {
-    const card = document.querySelector(`.card[data-notif-id="inv_${invitation_id}"]`);
+  function mettreAJourNotificationInvitation(inv_id, statut) {
+    const card = document.querySelector(`[data-notif-id="inv_${inv_id}"]`);
     if (!card) return;
 
-    const statusText = statut === "acceptee"
+    const badge = statut === "acceptee"
       ? '<span class="badge bg-success">Invitation acceptée</span>'
       : '<span class="badge bg-danger">Invitation refusée</span>';
 
-    const textEl = card.querySelector('div.flex-grow-1 p');
-    if (textEl) textEl.innerHTML += ` — ${statusText}`;
+    const p = card.querySelector("div.flex-grow-1 p");
+    if (p) p.innerHTML += ` — ${badge}`;
 
-    const btns = card.querySelectorAll('button');
-    btns.forEach(b => b.remove());
+    const buttons = card.querySelectorAll("button");
+    buttons.forEach(btn => btn.remove());
   }
 
-  // Fonction AJAX principale
-  window.repondreInvitation = function (invitationId, accepter) {
+  // Intermédiaire propre pour ton bouton HTML
+  window.gererInvitation = function (id, action) {
+    const accepter = action === "accepter";
     const url = accepter
-      ? `/invitation-accepter/${invitationId}/`
-      : `/invitation-refuser/${invitationId}/`;
+      ? `/invitation-accepter/${id}/`
+      : `/invitation-refuser/${id}/`;
 
     fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'X-CSRFToken': getCookie('csrftoken'),
+        "X-Requested-With": "XMLHttpRequest",
+        "X-CSRFToken": getCookie("csrftoken"),
       },
     })
-      .then(res => res.json())
-      .then(data => {
-        if (data.status === 'ok') {
-          mettreAJourNotificationInvitation(invitationId, accepter ? 'acceptee' : 'refusee');
-        } else {
-          alert("Erreur: " + (data.message || "Une erreur est survenue"));
-        }
-      })
-      .catch(e => alert("Erreur réseau"));
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === "ok") {
+        mettreAJourNotificationInvitation(id, accepter ? "acceptee" : "refusee");
+      } else {
+        alert("Erreur : " + (data.message || "Une erreur est survenue."));
+      }
+    })
+    .catch(() => alert("Erreur réseau."));
   };
 
-  // Intermédiaire pour répondre au onclick de ton HTML
-  window.gererInvitation = function (id, action) {
-    repondreInvitation(id, action === 'accepter');
-  };
-
-  // Helper pour CSRF
   function getCookie(name) {
     let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
+    if (document.cookie) {
+      const cookies = document.cookie.split(";");
       for (let c of cookies) {
         c = c.trim();
-        if (c.startsWith(name + '=')) {
+        if (c.startsWith(name + "=")) {
           cookieValue = decodeURIComponent(c.substring(name.length + 1));
           break;
         }
