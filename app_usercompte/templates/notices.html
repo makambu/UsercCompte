@@ -52,9 +52,8 @@
                 <small class="text-muted">{{ inv.date_envoi|date:"d/m/Y H:i" }}</small>
             </div>
             <div>
-                <button class="btn btn-success btn-sm me-2"
-                    onclick="repondreInvitation('{{ inv.id }}', true)">Accepter</button>
-                <button class="btn btn-danger btn-sm" onclick="repondreInvitation('{{ inv.id }}', false)">Refuser</button>
+                <button onclick="gererInvitation({{ inv.id }}, 'accepter')" class="btn btn-success btn-sm me-1">Accepter</button>
+                <button onclick="gererInvitation({{ inv.id }}, 'refuser')" class="btn btn-danger btn-sm">Refuser</button>
             </div>
         </div>
     </div>
@@ -177,7 +176,9 @@
 
   // ✅ Fonction AJAX globale pour accepter/refuser invitation
   window.repondreInvitation = function (invitationId, accepter) {
-    const url = accepter ? `/invitation-accepter/${invitationId}/` : `/invitation-refuser/${invitationId}/`;
+    const url = accepter
+      ? `/invitation-accepter/${invitationId}/`
+      : `/invitation-refuser/${invitationId}/`;
 
     fetch(url, {
       method: 'POST',
@@ -211,6 +212,11 @@
       }
     }
     return cookieValue;
+  }
+
+  // Facultatif : wrapper pour permettre usage de gererInvitation()
+  window.gererInvitation = function (id, action) {
+    repondreInvitation(id, action === 'accepter');
   }
 </script>
 
