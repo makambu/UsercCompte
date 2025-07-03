@@ -3,6 +3,9 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import os
 import json
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+
 
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -27,6 +30,9 @@ from django.core.serializers import serialize
 from django.templatetags.static import static
 from django.views.decorators.csrf import csrf_protect
 import cloudinary
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def splash_view(request):
@@ -158,21 +164,24 @@ def logout_user(request):
     return redirect('homes')
 
 
-@csrf_exempt
+@csrf_exempt  # À retirer si tu gères bien le CSRF côté JS
 def logout_ajax(request):
-    if request.method == 'POST':
-        user_id = request.session.get('user_id')
-        if user_id:
-            try:
-                user = Profil.objects.get(id=user_id)
-                user.is_online = False
-                user.derniere_connexion = timezone.now()
-                user.save()
-            except Profil.DoesNotExist:
-                pass
-        request.session.flush()
-        return JsonResponse({'status': 'ok'})
-    return JsonResponse({'status': 'bad_request'}, status=400)
+    if request.method != 'POST':
+        return JsonResponse({'status': 'method_not_allowed'}, status=405)
+    
+    user_id = request.session.get('user_id')
+    if user_id:
+        try:
+            user = Profil.objects.get(id=user_id)
+            user.is_online = False
+            user.derniere_connexion = timezone.now()
+            user.save()
+            logger.info(f"Utilisateur {user_id} déconnecté via logout_ajax.")
+        except Profil.DoesNotExist:
+            logger.warning(f"Profil avec id {user_id} non trouvé lors du logout_ajax.")
+    
+    request.session.flush()
+    return JsonResponse({'status': 'ok'})
 
 
 
@@ -805,26 +814,42 @@ def envoyer_invitation(request, profil_id):
         if emetteur == recepteur:
             return JsonResponse({'success': False, 'message': 'Impossible de s’ajouter soi-même.'}, status=400)
 
-        # Supprimer les anciennes invitations refusées entre les deux
         InvitationAmi.objects.filter(
             Q(emetteur=emetteur, recepteur=recepteur, statut='refusee') |
             Q(emetteur=recepteur, recepteur=emetteur, statut='refusee')
         ).delete()
 
-        # Ne bloquer que s’il y a une invitation en attente
         invitation_existante = InvitationAmi.objects.filter(
             Q(emetteur=emetteur, recepteur=recepteur, statut='envoyee') |
             Q(emetteur=recepteur, recepteur=emetteur, statut='envoyee')
         ).exists()
 
         if not invitation_existante:
-            InvitationAmi.objects.create(emetteur=emetteur, recepteur=recepteur, statut='envoyee')
+            invitation = InvitationAmi.objects.create(emetteur=emetteur, recepteur=recepteur, statut='envoyee')
+
+            # --- Envoi notification temps réel ---
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f"notif_{recepteur.id}",
+                {
+                    "type": "invitation_ami",
+                    "invitation": {
+                        "id": invitation.id,
+                        "emetteur": {
+                            "id": emetteur.id,
+                            "nom": emetteur.nom,
+                            "image": emetteur.image_profil.url if emetteur.image_profil else "",
+                        },
+                        "date_envoi": invitation.date_envoi.isoformat(),
+                    }
+                }
+            )
+
             return JsonResponse({'success': True})
         else:
             return JsonResponse({'success': False, 'message': 'Invitation déjà envoyée.'}, status=409)
 
     return JsonResponse({'success': False, 'message': 'Requête invalide'}, status=400)
-
 
 def annuler_invitation(request, profil_id):
     if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -845,6 +870,7 @@ def annuler_invitation(request, profil_id):
     return JsonResponse({'success': False, 'message': 'Requête invalide'})
 
 
+# Accepter invitation
 @require_POST
 def accepter_invitation(request, invitation_id):
     invitation = get_object_or_404(InvitationAmi, id=invitation_id, statut='envoyee')
@@ -853,7 +879,25 @@ def accepter_invitation(request, invitation_id):
 
     RelationAmi.objects.create(user1=invitation.emetteur, user2=invitation.recepteur)
 
-    # Qui est l'ami (côté utilisateur connecté)
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f"notif_{invitation.emetteur.id}",
+        {
+            "type": "invitation_ami_update",
+            "invitation_id": invitation.id,
+            "statut": invitation.statut,
+        }
+    )
+    async_to_sync(channel_layer.group_send)(
+        f"notif_{invitation.recepteur.id}",
+        {
+            "type": "invitation_ami_update",
+            "invitation_id": invitation.id,
+            "statut": invitation.statut,
+        }
+    )
+
+    # Optionnel : données de l'ami côté connecté
     user_id = request.session.get("user_id")
     ami = invitation.emetteur if invitation.recepteur.id == user_id else invitation.recepteur
 
@@ -871,11 +915,30 @@ def accepter_invitation(request, invitation_id):
     })
 
 
+# Refuser invitation
 @require_POST
 def refuser_invitation(request, invitation_id):
     invitation = get_object_or_404(InvitationAmi, id=invitation_id, statut='envoyee')
     invitation.statut = 'refusee'
     invitation.save()
+
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f"notif_{invitation.emetteur.id}",
+        {
+            "type": "invitation_ami_update",
+            "invitation_id": invitation.id,
+            "statut": invitation.statut,
+        }
+    )
+    async_to_sync(channel_layer.group_send)(
+        f"notif_{invitation.recepteur.id}",
+        {
+            "type": "invitation_ami_update",
+            "invitation_id": invitation.id,
+            "statut": invitation.statut,
+        }
+    )
 
     ami_id = invitation.emetteur.id if request.session.get("user_id") == invitation.recepteur.id else invitation.recepteur.id
 

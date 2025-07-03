@@ -249,11 +249,17 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
-    async def call_incoming(self, event):
+    async def invitation_ami(self, event):
         await self.send(text_data=json.dumps({
-            "type": "call_incoming",
-            "from_id": event["from_id"],
-            "from_name": event["from_name"]
+            "type": "invitation_ami",
+            "invitation": event["invitation"]
+        }))
+
+    async def invitation_ami_update(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "invitation_ami_update",
+            "invitation_id": event["invitation_id"],
+            "statut": event["statut"],
         }))
 
     async def new_notification(self, event):
@@ -267,3 +273,12 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             "type": "remove_message_notification",
             "from_id": event["from_id"]
         }))
+
+    async def call_incoming(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "call_incoming",
+            "from_id": event["from_id"],
+            "from_name": event["from_name"]
+        }))
+
+

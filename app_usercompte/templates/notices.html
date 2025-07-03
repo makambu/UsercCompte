@@ -21,56 +21,166 @@
 </div>
 
 
-
-
 <div class="container pt-3">
-    <div class="row">
-        <div class="col-12 d-flex align-items-center mt-4 mb-2">
-            <a href="{% url 'homes' %}" class="me-3 text-decoration-none text-blue fs-4" title="Retour à l'accueil">
-                <i class="fas fa-chevron-left"></i>
-            </a>
-            <h4 class="mb-0 fw-bold">🛎️ Vos notifications</h4>
-        </div>
-        <hr style="border-color: rgb(121, 119, 119);">
+  <div class="row">
+    <div class="col-12 d-flex align-items-center mt-4 mb-2">
+      <a href="{% url 'homes' %}" class="me-3 text-decoration-none text-blue fs-4" title="Retour à l'accueil">
+        <i class="fas fa-chevron-left"></i>
+      </a>
+      <h4 class="mb-0 fw-bold">🛎️ Vos notifications</h4>
     </div>
+    <hr style="border-color: rgb(121, 119, 119);">
+  </div>
 
-    {% if notifications %}
+  {% if notifications %}
+  <div id="notifications-list">
     {% for n in notifications %}
-    <div class="card shadow-sm mb-3">
-        <div class="card-body d-flex">
-            {% if n.emetteur and n.emetteur.image_profil %}
-            <a href="{% url 'voir_profil' n.emetteur.id %}">
-                <img src="{{ n.emetteur.image_profil.url }}" class="rounded-circle me-3" width="50" height="50">
-            </a>
-            {% else %}
-            <a href="{% url 'voir_profil' n.emetteur.id %}">
-                <img src="{% static 'images/image_4.png' %}" class="rounded-circle me-3" width="50" height="50">
-            </a>
+    <div class="card shadow-sm mb-3" data-notif-id="{{ n.id }}">
+      <div class="card-body d-flex align-items-center">
+        {% if n.emetteur and n.emetteur.image_profil %}
+          <a href="{% url 'voir_profil' n.emetteur.id %}">
+            <img src="{{ n.emetteur.image_profil.url }}" class="rounded-circle me-3" width="50" height="50" alt="Image profil">
+          </a>
+        {% else %}
+          <a href="{% url 'voir_profil' n.emetteur.id %}">
+            <img src="{% static 'images/image_4.png' %}" class="rounded-circle me-3" width="50" height="50" alt="Image profil">
+          </a>
+        {% endif %}
+        <div class="flex-grow-1">
+          <p class="mb-1">
+            <strong>
+              {% if n.emetteur %}
+              <a href="{% url 'voir_profil' n.emetteur.id %}">{{ n.emetteur.nom }}</a>
+              {% else %} Système {% endif %}
+            </strong>
+            —
+            {% if n.type == 'like_video' %}
+              <i class="bi bi-heart-fill text-danger"></i>
+            {% elif n.type == 'commentaire_video' %}
+              <i class="bi bi-chat-left-text-fill text-success"></i>
             {% endif %}
-            <div>
-                <p class="mb-1">
-                    <strong>
-                        {% if n.emetteur %}
-                        <a href="{% url 'voir_profil' n.emetteur.id %}">{{ n.emetteur.nom }}</a>
-                        {% else %} Système {% endif %}
-                    </strong>
-                    —
-                    {% if n.type == 'like_video' %}
-                    <i class="bi bi-heart-fill text-danger"></i>
-                    {% elif n.type == 'commentaire_video' %}
-                    <i class="bi bi-chat-left-text-fill text-success"></i>
-                    {% endif %}
-                    {{ n.message }}
-                </p>
-                <small class="text-muted">{{ n.date|date:"d/m/Y H:i" }}</small>
-            </div>
+            {{ n.message }}
+          </p>
+          <small class="text-muted">{{ n.date|date:"d/m/Y H:i" }}</small>
         </div>
+      </div>
     </div>
     {% endfor %}
-    {% else %}
-    <div class="alert alert-info">Aucune notification pour l’instant.</div>
-    {% endif %}
+  </div>
+  {% else %}
+  <div class="alert alert-info">Aucune notification pour l’instant.</div>
+  {% endif %}
 </div>
+
+<script>
+  // WebSocket setup
+  const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+  const notifSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/notifications/`);
+
+  notifSocket.onopen = () => console.log("WebSocket Notifications connecté.");
+
+  notifSocket.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    console.log("Notification WS reçue :", data);
+
+    // Gestion invitation ami
+    if (data.type === "invitation_ami") {
+      ajouterNotificationInvitation(data.invitation);
+    }
+    else if (data.type === "invitation_ami_update") {
+      mettreAJourNotificationInvitation(data.invitation_id, data.statut);
+    }
+    // gérer aussi tes autres notifications (messages, etc.)
+  };
+
+  notifSocket.onerror = (e) => console.error("Erreur WebSocket Notifications :", e);
+  notifSocket.onclose = () => console.warn("WebSocket Notifications fermé.");
+
+  // Fonction qui crée la notification invitation ami avec boutons Accepter/Refuser
+  function ajouterNotificationInvitation(invitation) {
+    const notificationsList = document.getElementById('notifications-list');
+    if (!notificationsList) return;
+
+    // Vérifie si notification déjà affichée
+    if (document.querySelector(`.card[data-notif-id="inv_${invitation.id}"]`)) return;
+
+    const imgSrc = invitation.emetteur.image || "{% static 'images/image_4.png' %}";
+    const nom = invitation.emetteur.nom || "Utilisateur";
+    const profilUrl = `/profil/${invitation.emetteur.id}/`;  // adapte si besoin
+
+    const cardHTML = `
+      <div class="card shadow-sm mb-3" data-notif-id="inv_${invitation.id}">
+        <div class="card-body d-flex align-items-center">
+          <a href="${profilUrl}">
+            <img src="${imgSrc}" class="rounded-circle me-3" width="50" height="50" alt="Image profil">
+          </a>
+          <div class="flex-grow-1">
+            <p class="mb-1">
+              <strong><a href="${profilUrl}">${nom}</a></strong> vous a envoyé une invitation d’amitié.
+            </p>
+            <small class="text-muted">${new Date(invitation.date_envoi).toLocaleString()}</small>
+          </div>
+          <div>
+            <button class="btn btn-success btn-sm me-2" onclick="repondreInvitation('${invitation.id}', true)">Accepter</button>
+            <button class="btn btn-danger btn-sm" onclick="repondreInvitation('${invitation.id}', false)">Refuser</button>
+          </div>
+        </div>
+      </div>`;
+
+    notificationsList.insertAdjacentHTML('afterbegin', cardHTML);
+  }
+
+  // Fonction qui met à jour la notification après réponse
+  function mettreAJourNotificationInvitation(invitation_id, statut) {
+    const card = document.querySelector(`.card[data-notif-id="inv_${invitation_id}"]`);
+    if (!card) return;
+
+    const statusText = statut === "acceptee" ? 
+      '<span class="badge bg-success">Invitation acceptée</span>' : 
+      '<span class="badge bg-danger">Invitation refusée</span>';
+
+    card.querySelector('div.flex-grow-1 p').innerHTML += ` — ${statusText}`;
+    // Supprime boutons
+    const btns = card.querySelectorAll('button');
+    btns.forEach(b => b.remove());
+  }
+
+  // Fonction AJAX accepter/refuser invitation
+  function repondreInvitation(invitationId, accepter) {
+    const url = accepter ? `/invitation/accepter/${invitationId}/` : `/invitation/refuser/${invitationId}/`;
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+    }).then(res => res.json())
+      .then(data => {
+        if (data.status === 'ok') {
+          mettreAJourNotificationInvitation(invitationId, accepter ? 'acceptee' : 'refusee');
+        } else {
+          alert("Erreur: " + data.message || "Une erreur est survenue");
+        }
+      }).catch(e => alert("Erreur réseau"));
+  }
+
+  // Helper pour CSRF token
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let c of cookies) {
+        c = c.trim();
+        if (c.startsWith(name + '=')) {
+          cookieValue = decodeURIComponent(c.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+</script>
+
 
 
 

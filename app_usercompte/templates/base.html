@@ -502,22 +502,66 @@
     });
 
     // Maintenant on intercepte uniquement si l'utilisateur ferme ou actualise (beforeunload) sendBeacon
-    window.addEventListener("beforeunload", function () {
-        if (!isNavigating) {
-            if (navigator.sendBeacon) {
-                const data = new FormData();
-                navigator.beforeunload("{% url 'logout_ajax' %}", data);
-            } else {
-                fetch("{% url 'logout_ajax' %}", {
-                    method: "POST",
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': '{{ csrf_token }}',
-                    },
-                });
-            }
-        }
-    });
+  let inactivityTimeout = null;
+  const LOGOUT_URL = "{% url 'logout_ajax' %}";
+  const CSRF_TOKEN = '{{ csrf_token }}';
+
+// Fonction pour déconnecter via AJAX (fetch ou sendBeacon)
+function logoutUser() {
+    if (navigator.sendBeacon) {
+        const blob = new Blob([], { type: 'application/x-www-form-urlencoded' });
+        navigator.sendBeacon(LOGOUT_URL, blob);
+    } else {
+        fetch(LOGOUT_URL, {
+            method: "POST",
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': CSRF_TOKEN,
+            },
+            keepalive: true
+        });
+    }
+}
+
+// Réinitialiser timer d'inactivité
+function resetInactivityTimer() {
+    if (inactivityTimeout) clearTimeout(inactivityTimeout);
+    inactivityTimeout = setTimeout(() => {
+        logoutUser();
+        // Optionnel : Rediriger vers la page login
+        window.location.href = "{% url 'login' %}";
+    }, 30 * 60 * 1000); // 30 minutes
+}
+
+// Ecouter les interactions utilisateur
+['click', 'keydown', 'mousemove', 'scroll', 'touchstart'].forEach(event => {
+    window.addEventListener(event, resetInactivityTimer);
+});
+
+// Initialiser timer au chargement
+resetInactivityTimer();
+
+
+// Différencier fermeture onglet vs actualisation avec pagehide & visibilitychange
+let isRefresh = false;
+
+// Lorsque page devient invisible, on met un flag temporaire
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+        isRefresh = true;
+    } else {
+        isRefresh = false;
+    }
+});
+
+// Lors du unload, si c'est pas un refresh, on logout
+window.addEventListener('pagehide', (event) => {
+    // pagehide est appelé aussi lors du rafraîchissement, on essaie d'écarter ce cas
+    if (!isRefresh) {
+        logoutUser();
+    }
+});
+
 </script>
 
 

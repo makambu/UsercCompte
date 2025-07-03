@@ -1,18 +1,55 @@
 {% load static %}
 
-
-<!-- Toast container -->
-<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 9999;"></div>
+<!-- Toast container positionné en haut à droite -->
+<div class="toast-container position-fixed top-0 end-0 mt-3 me-3" id="toastContainer" style="z-index: 1080; max-width: 320px;"></div>
 
 <!-- Sonnerie audio -->
 <audio id="ringtone" src="{% static 'sounds/ringtone.mp3' %}" preload="auto"></audio>
 
-<script>
-  document.addEventListener("click", () => {
-    const son = document.getElementById("ringtone");
-    if (son) son.play().then(() => son.pause()).catch(() => {});
-  }, { once: true });
+<style>
+  /* Animation toast fade */
+  .toast {
+    opacity: 0;
+    transform: translateX(100%);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  .toast.showing, .toast.show {
+    opacity: 1;
+    transform: translateX(0);
+  }
 
+  /* Badge notification */
+  #sololaBadge {
+    position: relative;
+    display: inline-block;
+  }
+  #sololaCount {
+    position: absolute;
+    top: -6px;
+    right: -10px;
+    background: #dc3545; /* bootstrap danger rouge */
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 50%;
+    padding: 0 6px;
+    min-width: 20px;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+    box-shadow: 0 0 4px rgba(0,0,0,0.3);
+  }
+  .clignote {
+    animation: clignoter 1.5s linear infinite;
+  }
+  @keyframes clignoter {
+    0%, 100% {opacity: 1;}
+    50% {opacity: 0.3;}
+  }
+</style>
+
+<script>
+  // Initialiser sonnerie + timeout 25s max
   const son = document.getElementById("ringtone");
   let sonnerieTimeout = null;
 
@@ -21,7 +58,7 @@
     son.currentTime = 0;
     son.play().catch(e => console.warn("Son bloqué :", e));
     if (sonnerieTimeout) clearTimeout(sonnerieTimeout);
-    sonnerieTimeout = setTimeout(() => son.pause(), 10000);
+    sonnerieTimeout = setTimeout(() => son.pause(), 25000); // 25 secondes max
   }
 
   function arreterSonnerie() {
@@ -29,6 +66,14 @@
     if (sonnerieTimeout) clearTimeout(sonnerieTimeout);
   }
 
+  // Préparer la sonnerie au premier clic utilisateur (autoplay policy)
+  document.addEventListener("click", () => {
+    if (son) {
+      son.play().then(() => son.pause()).catch(() => {});
+    }
+  }, { once: true });
+
+  // WebSocket notifications
   const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
   const notifSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/notifications/`);
 
@@ -59,47 +104,52 @@
   notifSocket.onerror = (e) => console.error("Erreur WebSocket Notifications :", e);
   notifSocket.onclose = () => console.warn("WebSocket Notifications fermé.");
 
+  // Vérifie périodiquement si nouveaux messages non lus
   function verifierMessagesNonLus() {
     fetch("{% url 'verifier_messages' %}")
       .then(res => res.json())
       .then(data => {
-        if (data.status === "jouer_sonnerie") son.play();
+        if (data.status === "jouer_sonnerie") {
+          jouerSonnerieNotification();
+        }
       });
   }
 
+  // Met à jour le badge de notification dans la navbar
   function mettreAJourBadgeSolola(nb = null) {
     const badge = document.getElementById("sololaBadge");
     const count = document.getElementById("sololaCount");
 
-    if (badge && count) {
-      if (nb !== null) {
-        if (nb > 0) {
-          badge.classList.remove("d-none");
-          badge.classList.add("clignote");
-          count.textContent = nb;
-        } else {
-          badge.classList.add("d-none");
-          badge.classList.remove("clignote");
-          count.textContent = "0";
-        }
+    if (!badge || !count) return;
+
+    if (nb !== null) {
+      if (nb > 0) {
+        badge.classList.remove("d-none");
+        badge.classList.add("clignote");
+        count.textContent = nb;
       } else {
-        fetch("{% url 'nb_messages_non_lus' %}")
-          .then(res => res.json())
-          .then(data => {
-            if (data.nb > 0) {
-              badge.classList.remove("d-none");
-              badge.classList.add("clignote");
-              count.textContent = data.nb;
-            } else {
-              badge.classList.add("d-none");
-              badge.classList.remove("clignote");
-              count.textContent = "0";
-            }
-          });
+        badge.classList.add("d-none");
+        badge.classList.remove("clignote");
+        count.textContent = "0";
       }
+    } else {
+      fetch("{% url 'nb_messages_non_lus' %}")
+        .then(res => res.json())
+        .then(data => {
+          if (data.nb > 0) {
+            badge.classList.remove("d-none");
+            badge.classList.add("clignote");
+            count.textContent = data.nb;
+          } else {
+            badge.classList.add("d-none");
+            badge.classList.remove("clignote");
+            count.textContent = "0";
+          }
+        });
     }
   }
 
+  // Toast notifications Bootstrap personnalisées
   function afficherToast(nom_expediteur, contenu = "") {
     const toastHTML = `
       <div class="toast align-items-center text-white bg-primary border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
@@ -121,12 +171,12 @@
     }
   }
 
+  // Notifications desktop
   function demanderPermissionNotification() {
     if (Notification.permission === "default") {
       Notification.requestPermission();
     }
   }
-
   function envoyerNotificationDesktop(titre, corps) {
     if (Notification.permission === "granted") {
       const notif = new Notification(titre, {
