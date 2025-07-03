@@ -38,8 +38,11 @@
     <div class="card shadow-sm mb-3" data-notif-id="inv_{{ inv.id }}">
         <div class="card-body d-flex align-items-center">
             <a href="{% url 'voir_profil' inv.emetteur.id %}">
-                <img src="{{ inv.emetteur.image_profil.url if inv.emetteur.image_profil else static 'images/image_4.png' }}"
-                    class="rounded-circle me-3" width="50" height="50">
+                {% if inv.emetteur.image_profil %}
+                <img src="{{ inv.emetteur.image_profil.url }}" class="rounded-circle me-3" width="50" height="50">
+                {% else %}
+                <img src="{% static 'images/image_4.png' %}" class="rounded-circle me-3" width="50" height="50">
+                {% endif %}
             </a>
             <div class="flex-grow-1">
                 <p class="mb-1">
