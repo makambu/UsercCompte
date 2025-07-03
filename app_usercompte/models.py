@@ -205,6 +205,7 @@ class Message(models.Model):
     type_fichier = models.CharField(max_length=10, null=True, blank=True)  # "image", "video", "pdf", etc.
     date_envoi = models.DateTimeField(default=timezone.now)
     lu = models.BooleanField(default=False)
+    notifie = models.BooleanField(default=False)
 
     def __str__(self):
         return f"De {self.expediteur} à {self.destinataire}"

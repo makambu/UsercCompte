@@ -35,6 +35,8 @@ urlpatterns = [
     path("chat/<int:user_id>/", views.chat_view, name="chat_user"),
     path("send-message/", views.send_message_ajax, name="send_message_ajax"),
     path("chat/", views.liste_conversations, name="messagerie"),
+    path("ajax/verifier_messages/", views.verifier_messages_non_lus, name="verifier_messages"),
+    path("ajax/nb_messages_non_lus/", views.compteur_messages_non_lus, name="nb_messages_non_lus"),
     path('story/ajouter/', views.ajouter_story, name='ajouter_story'),
     path('ajax/stories/<int:user_id>/', views.stories_utilisateur, name='ajax_stories_user'),
     path('ajax/story/ajouter/', views.ajouter_story_ajax, name='ajax_ajouter_story'),
@@ -43,6 +45,7 @@ urlpatterns = [
     path('chatbot/', views.chatbot_view, name='chatbot_view'),
     path("chatbot/api/", views.envoyer_question, name="chatbot_api"),
     path("chatbot/historique/", views.charger_historique, name="chatbot_historique"),
+    path("ajax/nom_utilisateur/<int:user_id>/", views.nom_utilisateur, name="nom_utilisateur"),
 ]
 
 if settings.DEBUG:

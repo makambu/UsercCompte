@@ -966,7 +966,7 @@ def chat_view(request, user_id):
     user_cible = get_object_or_404(Profil, id=user_id)
 
     # Marquer les messages comme lus
-    Message.objects.filter(expediteur=user_cible, destinataire=user_connecte, lu=False).update(lu=True)
+    Message.objects.filter(expediteur=user_cible, destinataire=user_connecte, lu=False).update(lu=True, notifie=True)
 
     messages = Message.objects.filter(
         Q(expediteur=user_connecte, destinataire=user_cible) |
@@ -1087,6 +1087,39 @@ def liste_conversations(request):
         "messages_non_lus": messages_non_lus,
         "en_ligne_ids": en_ligne_ids,
     })
+
+def verifier_messages_non_lus(request):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JsonResponse({"status": "non_connecte"})
+
+    profil = get_object_or_404(Profil, id=user_id)
+    limite = timezone.now() - timedelta(minutes=5)
+
+    messages = Message.objects.filter(
+        destinataire=profil,
+        lu=False,
+        notifie=False,
+        date_envoi__lte=limite
+    )
+
+    if messages.exists():
+        # Marquer comme notifié pour ne pas jouer le son plusieurs fois
+        messages.update(notifie=True)
+        return JsonResponse({"status": "jouer_sonnerie"})
+
+    return JsonResponse({"status": "ok"})
+
+
+def compteur_messages_non_lus(request):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JsonResponse({"nb": 0})
+
+    profil = get_object_or_404(Profil, id=user_id)
+    nb = Message.objects.filter(destinataire=profil, lu=False).count()
+
+    return JsonResponse({"nb": nb})
 
 
 
@@ -1279,6 +1312,17 @@ def charger_historique(request):
     return JsonResponse({"messages": data})
 
 
+
+def nom_utilisateur(request, user_id):
+    try:
+        profil = Profil.objects.get(id=user_id)
+        last_msg = Message.objects.filter(expediteur=profil).order_by("-date_envoi").first()
+        return JsonResponse({
+            "nom": f"{profil.nom} {profil.prenom}",
+            "last_message": last_msg.contenu[:100] if last_msg and last_msg.contenu else ""
+        })
+    except Profil.DoesNotExist:
+        return JsonResponse({"nom": "Inconnu", "last_message": ""})
 
 
 

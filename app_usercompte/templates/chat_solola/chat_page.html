@@ -323,7 +323,94 @@ body {
   </div>
 </div>
 
-<audio id="ringtone" src="/static/sounds/ringtone.mp3"></audio>
+
+<!-- Conteneur pour toasts -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 9999;"></div>
+
+
+
+<audio id="ringtone" src="{% static 'sounds/ringtone.mp3' %}" preload="auto"></audio>
+
+<script>
+  const userId = "{{ utilisateur_connecte.id }}";
+
+  // Vérification AJAX (toutes les 30 secondes)
+  function verifierMessagesNonLus() {
+    fetch("{% url 'verifier_messages' %}")
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "jouer_sonnerie") {
+          const son = document.getElementById("ringtone");
+          son.play();
+        }
+      });
+  }
+
+  // Compteur du badge "Solola"
+  function mettreAJourBadgeSolola(nb = null) {
+    const badge = document.getElementById("sololaBadge");
+    const count = document.getElementById("sololaCount");
+
+    if (nb !== null) {
+      if (nb > 0) {
+        badge.classList.remove("d-none");
+        count.textContent = nb;
+      } else {
+        badge.classList.add("d-none");
+        count.textContent = "0";
+      }
+    } else {
+      // Fallback AJAX
+      fetch("{% url 'nb_messages_non_lus' %}")
+        .then(res => res.json())
+        .then(data => {
+          if (data.nb > 0) {
+            badge.classList.remove("d-none");
+            count.textContent = data.nb;
+          } else {
+            badge.classList.add("d-none");
+            count.textContent = "0";
+          }
+        });
+    }
+  }
+
+  // Appeler AJAX régulièrement
+  setInterval(verifierMessagesNonLus, 30000); // chaque 30s
+  setInterval(() => mettreAJourBadgeSolola(null), 15000); // fallback
+
+  // WebSocket Notifications
+  const notifSocket = new WebSocket("ws://" + window.location.host + "/ws/notifications/");
+
+  notifSocket.onmessage = function (e) {
+    const data = JSON.parse(e.data);
+
+    if (data.type === "new_message_notification") {
+      mettreAJourBadgeSolola(null);
+
+      // Optionnel : Fetch pour récupérer le nom
+      fetch(`/ajax/nom_utilisateur/${data.from_id}/`)
+        .then(res => res.json())
+        .then(info => {
+          afficherToast(info.nom, info.last_message || "");
+          envoyerNotificationDesktop("💬 Nouveau message", `De ${info.nom}`);
+        });
+    }
+
+    if (data.type === "remove_message_notification") {
+      mettreAJourBadgeSolola(null);
+    }
+
+    if (data.type === "call_incoming") {
+      alert("📞 Appel de " + data.from_name);
+    }
+  };
+
+
+  notifSocket.onclose = function() {
+    console.warn("WebSocket notification fermé");
+  };
+</script>
 
 
 
@@ -369,27 +456,30 @@ notifSocket.onopen = function () {
   console.log("Notification WebSocket connecté.");
 };
 
-notifSocket.onmessage = function (e) {
+notifSocket.onmessage = function(e) {
   const data = JSON.parse(e.data);
 
-  if (data.type === "call_incoming") {
-    document.getElementById("callUserName").innerText = data.from_name;
-    document.getElementById("callModal").style.display = "flex";
-
-    const ringtone = document.getElementById("ringtone");
-    ringtone.currentTime = 0;
-    ringtone.play();
-  }
-
   if (data.type === "new_message_notification") {
-    // Ajoute ton badge ici
-    console.log("🔔 Nouveau message de :", data.from_id);
+    mettreAJourBadgeSolola(null);
+
+    // Optionnel : Fetch pour récupérer le nom
+    fetch(`/ajax/nom_utilisateur/${data.from_id}/`)
+      .then(res => res.json())
+      .then(info => {
+        afficherToast(info.nom, info.last_message || "");
+        envoyerNotificationDesktop("💬 Nouveau message", `De ${info.nom}`);
+      });
   }
 
   if (data.type === "remove_message_notification") {
-    console.log("✅ Badge à retirer pour :", data.from_id);
+    mettreAJourBadgeSolola(null);
+  }
+
+  if (data.type === "call_incoming") {
+    alert("📞 Appel de " + data.from_name);
   }
 };
+
 
 notifSocket.onerror = function (e) {
   console.error("Erreur sur le WebSocket notif :", e);
@@ -682,6 +772,52 @@ document.addEventListener("click", function (event) {
 
 
 <!-- Scripts call audio et video -->
+
+
+<script>
+  function afficherToast(nom_expediteur, contenu = "") {
+    const toastHTML = `
+      <div class="toast align-items-center text-white bg-primary border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body">
+            📩 Message de <strong>${nom_expediteur}</strong><br>
+            ${contenu ? contenu.slice(0, 80) + '…' : 'Nouveau message'}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      </div>`;
+
+    const container = document.getElementById("toastContainer");
+    container.insertAdjacentHTML("beforeend", toastHTML);
+
+    const toastEl = container.lastElementChild;
+    const bsToast = new bootstrap.Toast(toastEl);
+    bsToast.show();
+
+    // Supprimer après 8s
+    setTimeout(() => toastEl.remove(), 8000);
+  }
+
+  function demanderPermissionNotification() {
+    if (Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }
+
+  function envoyerNotificationDesktop(titre, message) {
+    if (Notification.permission === "granted" && document.visibilityState !== "visible") {
+      const notification = new Notification(titre, {
+        body: message,
+        icon: "{% static 'images/logo.png' %}", // Change cette icône selon ton site
+        tag: "message-nouveau"
+      });
+
+      setTimeout(() => notification.close(), 8000);
+    }
+  }
+
+  demanderPermissionNotification();
+</script>
 
 
 
