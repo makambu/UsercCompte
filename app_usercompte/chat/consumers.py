@@ -23,16 +23,6 @@ def decode_base64_file(data, filename):
 # ====================================
 # ✅ ChatConsumer (pour chat socket)
 # ====================================
-import json
-import logging
-from channels.generic.websocket import AsyncWebsocketConsumer
-from asgiref.sync import sync_to_async
-from .models import Message, Profil
-from .utils import decode_base64_file  # ta fonction perso pour décoder base64
-import cloudinary.uploader
-
-logger = logging.getLogger(__name__)
-
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
