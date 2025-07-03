@@ -529,7 +529,7 @@ function resetInactivityTimer() {
     inactivityTimeout = setTimeout(() => {
         logoutUser();
         // Optionnel : Rediriger vers la page login
-        window.location.href = "{% url 'login' %}";
+        window.location.href = "{% url 'login_user' %}";
     }, 30 * 60 * 1000); // 30 minutes
 }
 
