@@ -1,0 +1,141 @@
+<!-- Toast container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 9999;"></div>
+
+<!-- Sonnerie audio -->
+<audio id="ringtone" src="{% static 'sounds/ringtone.mp3' %}" preload="auto"></audio>
+
+<script>
+  document.addEventListener("click", () => {
+    const son = document.getElementById("ringtone");
+    if (son) son.play().then(() => son.pause()).catch(() => {});
+  }, { once: true });
+
+  const son = document.getElementById("ringtone");
+  let sonnerieTimeout = null;
+
+  function jouerSonnerieNotification() {
+    if (!son) return;
+    son.currentTime = 0;
+    son.play().catch(e => console.warn("Son bloqué :", e));
+    if (sonnerieTimeout) clearTimeout(sonnerieTimeout);
+    sonnerieTimeout = setTimeout(() => son.pause(), 10000);
+  }
+
+  function arreterSonnerie() {
+    if (son) son.pause();
+    if (sonnerieTimeout) clearTimeout(sonnerieTimeout);
+  }
+
+  const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+  const notifSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/notifications/`);
+
+  notifSocket.onopen = () => console.log("WebSocket Notifications connecté.");
+
+  notifSocket.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    console.log("📥 Notification reçue :", data);
+
+    if (data.type === "new_message_notification") {
+      mettreAJourBadgeSolola(null);
+      jouerSonnerieNotification();
+
+      fetch(`/ajax/nom_utilisateur/${data.from_id}/`)
+        .then(res => res.json())
+        .then(info => {
+          afficherToast(info.nom, info.last_message || "");
+          envoyerNotificationDesktop("💬 Nouveau message", `De ${info.nom}`);
+        });
+    }
+
+    if (data.type === "remove_message_notification") {
+      mettreAJourBadgeSolola(null);
+      arreterSonnerie();
+    }
+  };
+
+  notifSocket.onerror = (e) => console.error("Erreur WebSocket Notifications :", e);
+  notifSocket.onclose = () => console.warn("WebSocket Notifications fermé.");
+
+  function verifierMessagesNonLus() {
+    fetch("{% url 'verifier_messages' %}")
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "jouer_sonnerie") son.play();
+      });
+  }
+
+  function mettreAJourBadgeSolola(nb = null) {
+    const badge = document.getElementById("sololaBadge");
+    const count = document.getElementById("sololaCount");
+
+    if (badge && count) {
+      if (nb !== null) {
+        if (nb > 0) {
+          badge.classList.remove("d-none");
+          badge.classList.add("clignote");
+          count.textContent = nb;
+        } else {
+          badge.classList.add("d-none");
+          badge.classList.remove("clignote");
+          count.textContent = "0";
+        }
+      } else {
+        fetch("{% url 'nb_messages_non_lus' %}")
+          .then(res => res.json())
+          .then(data => {
+            if (data.nb > 0) {
+              badge.classList.remove("d-none");
+              badge.classList.add("clignote");
+              count.textContent = data.nb;
+            } else {
+              badge.classList.add("d-none");
+              badge.classList.remove("clignote");
+              count.textContent = "0";
+            }
+          });
+      }
+    }
+  }
+
+  function afficherToast(nom_expediteur, contenu = "") {
+    const toastHTML = `
+      <div class="toast align-items-center text-white bg-primary border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body">
+            📩 Message de <strong>${nom_expediteur}</strong><br>
+            ${contenu ? contenu.slice(0, 80) + '…' : 'Nouveau message'}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      </div>`;
+    const container = document.getElementById("toastContainer");
+    if (container) {
+      container.insertAdjacentHTML("beforeend", toastHTML);
+      const toastEl = container.lastElementChild;
+      const bsToast = new bootstrap.Toast(toastEl);
+      bsToast.show();
+      setTimeout(() => toastEl.remove(), 8000);
+    }
+  }
+
+  function demanderPermissionNotification() {
+    if (Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }
+
+  function envoyerNotificationDesktop(titre, corps) {
+    if (Notification.permission === "granted") {
+      const notif = new Notification(titre, {
+        body: corps,
+        icon: "/static/img/logo.png"
+      });
+      setTimeout(() => notif.close(), 8000);
+    }
+  }
+
+  setInterval(verifierMessagesNonLus, 30000);
+  setInterval(() => mettreAJourBadgeSolola(null), 15000);
+
+  demanderPermissionNotification();
+</script>
