@@ -7,19 +7,14 @@
 
 <!-- Carousel de bienvenue -->
 <div class="carousel-inner mt-4">
-    <div class="carousel-item active position-relative">
-        <img src="{% static 'images/ima_no.jpg' %}" class="d-block w-100"
-            style="height: 250px; object-fit: fill; object-position: top; border-radius: 8px;">
-        
-        <!-- Zone de texte superposée -->
-        <div class="carousel-caption d-flex flex-column mb-0 justify-content-end text-start pb-1"
-             style="bottom: 0; width: 100%; left: 0; right: 0;">
-            <h3 class="text-center fw-bold text-white mb-0">Bienvenue dans le monde des notifications</h3>
-            <p class="text-center" style="font-weight: 500;">Découvrez les personnes ayant aimer et commenter des activités sur ton environnement d'attente.</p>
-        </div>
+  <div class="carousel-item active position-relative">
+    <img src="{% static 'images/ima_no.jpg' %}" class="d-block w-100" style="height: 250px; object-fit: fill; object-position: top; border-radius: 8px;">
+    <div class="carousel-caption d-flex flex-column mb-0 justify-content-end text-start pb-1" style="bottom: 0; width: 100%; left: 0; right: 0;">
+      <h3 class="text-center fw-bold text-white mb-0">Bienvenue dans le monde des notifications</h3>
+      <p class="text-center" style="font-weight: 500;">Découvrez les personnes ayant aimer et commenter des activités sur ton environnement d'attente.</p>
     </div>
+  </div>
 </div>
-
 
 <div class="container pt-3">
   <div class="row">
@@ -27,7 +22,7 @@
       <a href="{% url 'homes' %}" class="me-3 text-decoration-none text-blue fs-4" title="Retour à l'accueil">
         <i class="fas fa-chevron-left"></i>
       </a>
-      <h4 class="mb-0 fw-bold">🛎️ Vos notifications</h4>
+      <h4 class="mb-0 fw-bold">🛗️ Vos notifications</h4>
     </div>
     <hr style="border-color: rgb(121, 119, 119);">
   </div>
@@ -36,83 +31,55 @@
   <div id="notifications-list">
     {% for inv in invitations %}
     <div class="card shadow-sm mb-3" data-notif-id="inv_{{ inv.id }}">
-        <div class="card-body d-flex align-items-center">
-            <a href="{% url 'voir_profil' inv.emetteur.id %}">
-                {% if inv.emetteur.image_profil %}
-                <img src="{{ inv.emetteur.image_profil.url }}" class="rounded-circle me-3" width="50" height="50">
-                {% else %}
-                <img src="{% static 'images/image_4.png' %}" class="rounded-circle me-3" width="50" height="50">
-                {% endif %}
-            </a>
-            <div class="flex-grow-1">
-                <p class="mb-1">
-                    <strong><a href="{% url 'voir_profil' inv.emetteur.id %}">{{ inv.emetteur.nom }}</a></strong> vous a
-                    envoyé une invitation d’amitié.
-                </p>
-                <small class="text-muted">{{ inv.date_envoi|date:"d/m/Y H:i" }}</small>
-            </div>
-            <div>
-                <button onclick="gererInvitation({{ inv.id }}, 'accepter')" class="btn btn-success btn-sm me-1">Accepter</button>
-                <button onclick="gererInvitation({{ inv.id }}, 'refuser')" class="btn btn-danger btn-sm">Refuser</button>
-            </div>
+      <div class="card-body d-flex align-items-center">
+        <a href="{% url 'voir_profil' inv.emetteur.id %}">
+          {% if inv.emetteur.image_profil %}
+          <img src="{{ inv.emetteur.image_profil.url }}" class="rounded-circle me-3" width="50" height="50">
+          {% else %}
+          <img src="{% static 'images/image_4.png' %}" class="rounded-circle me-3" width="50" height="50">
+          {% endif %}
+        </a>
+        <div class="flex-grow-1">
+          <p class="mb-1">
+            <strong><a href="{% url 'voir_profil' inv.emetteur.id %}">{{ inv.emetteur.nom }}</a></strong> vous a envoyé une invitation d’amitié.
+          </p>
+          <small class="text-muted">{{ inv.date_envoi|date:"d/m/Y H:i" }}</small>
         </div>
-    </div>
-    {% endfor %}
-    
-    {% for n in notifications %}
-    <div class="card shadow-sm mb-3" data-notif-id="{{ n.id }}">
-        <div class="card-body d-flex align-items-center">
-            {% if n.emetteur and n.emetteur.image_profil %}
-            <a href="{% url 'voir_profil' n.emetteur.id %}">
-                <img src="{{ n.emetteur.image_profil.url }}" class="rounded-circle me-3" width="50" height="50"
-                    alt="Image profil">
-            </a>
-            {% else %}
-            <a href="{% url 'voir_profil' n.emetteur.id %}">
-                <img src="{% static 'images/image_4.png' %}" class="rounded-circle me-3" width="50" height="50"
-                    alt="Image profil">
-            </a>
-            {% endif %}
-            <div class="flex-grow-1">
-                <p class="mb-1">
-                    <strong>
-                        {% if n.emetteur %}
-                        <a href="{% url 'voir_profil' n.emetteur.id %}">{{ n.emetteur.nom }}</a>
-                        {% else %}
-                        Système
-                        {% endif %}
-                    </strong>
-                    —
-                    {% if n.type == 'like_video' %}
-                    <i class="bi bi-heart-fill text-danger"></i>
-                    {% elif n.type == 'commentaire_video' %}
-                    <i class="bi bi-chat-left-text-fill text-success"></i>
-                    {% endif %}
-                    {{ n.message }}
-                </p>
-                <small class="text-muted">{{ n.date|date:"d/m/Y H:i" }}</small>
-            </div>
+        <div>
+          <button onclick="gererInvitation({{ inv.id }}, 'accepter')" class="btn btn-success btn-sm me-1">Accepter</button>
+          <button onclick="gererInvitation({{ inv.id }}, 'refuser')" class="btn btn-danger btn-sm">Refuser</button>
         </div>
+      </div>
     </div>
     {% endfor %}
 
+    {% for n in notifications %}
+    <div class="card shadow-sm mb-3" data-notif-id="{{ n.id }}">
+      <div class="card-body d-flex align-items-center">
+        <a href="{% url 'voir_profil' n.emetteur.id %}">
+          {% if n.emetteur.image_profil %}
+          <img src="{{ n.emetteur.image_profil.url }}" class="rounded-circle me-3" width="50" height="50" alt="Image profil">
+          {% else %}
+          <img src="{% static 'images/image_4.png' %}" class="rounded-circle me-3" width="50" height="50" alt="Image profil">
+          {% endif %}
+        </a>
+        <div class="flex-grow-1">
+          <p class="mb-1">
+            <strong><a href="{% url 'voir_profil' n.emetteur.id %}">{{ n.emetteur.nom }}</a></strong> — {{ n.message }}
+          </p>
+          <small class="text-muted">{{ n.date|date:"d/m/Y H:i" }}</small>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
   </div>
   {% else %}
   <div class="alert alert-info">Aucune notification pour l’instant.</div>
   {% endif %}
 </div>
 
-
-
 <script>
-  // ⚠️ Déclarer wsScheme sans double déclaration
-
-  // ✅ Wrapper utilisé par les boutons
-  window.gererInvitation = function(id, action) {
-    repondreInvitation(id, action === 'accepter');
-  };
-
-  let wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+  const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
   const notifSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/notifications/`);
 
   notifSocket.onopen = () => console.log("WebSocket Notifications connecté.");
@@ -123,8 +90,7 @@
 
     if (data.type === "invitation_ami") {
       ajouterNotificationInvitation(data.invitation);
-    }
-    else if (data.type === "invitation_ami_update") {
+    } else if (data.type === "invitation_ami_update") {
       mettreAJourNotificationInvitation(data.invitation_id, data.statut);
     }
   };
@@ -132,36 +98,29 @@
   notifSocket.onerror = (e) => console.error("Erreur WebSocket Notifications :", e);
   notifSocket.onclose = () => console.warn("WebSocket Notifications fermé.");
 
-  function ajouterNotificationInvitation(invitation) {
-    const notificationsList = document.getElementById('notifications-list');
-    if (!notificationsList) return;
+  window.gererInvitation = function (id, action) {
+    repondreInvitation(id, action === 'accepter');
+  }
 
-    if (document.querySelector(`.card[data-notif-id="inv_${invitation.id}"]`)) return;
+  function repondreInvitation(invitationId, accepter) {
+    const url = accepter ? `/invitation-accepter/${invitationId}/` : `/invitation-refuser/${invitationId}/`;
 
-    const imgSrc = invitation.emetteur.image || "{% static 'images/image_4.png' %}";
-    const nom = invitation.emetteur.nom || "Utilisateur";
-    const profilUrl = `/profil/${invitation.emetteur.id}/`;
-
-    const cardHTML = `
-      <div class="card shadow-sm mb-3" data-notif-id="inv_${invitation.id}">
-        <div class="card-body d-flex align-items-center">
-          <a href="${profilUrl}">
-            <img src="${imgSrc}" class="rounded-circle me-3" width="50" height="50" alt="Image profil">
-          </a>
-          <div class="flex-grow-1">
-            <p class="mb-1">
-              <strong><a href="${profilUrl}">${nom}</a></strong> vous a envoyé une invitation d’amitié.
-            </p>
-            <small class="text-muted">${new Date(invitation.date_envoi).toLocaleString()}</small>
-          </div>
-          <div>
-            <button class="btn btn-success btn-sm me-2" onclick="gererInvitation(${invitation.id}, 'accepter')">Accepter</button>
-            <button class="btn btn-danger btn-sm" onclick="gererInvitation(${invitation.id}, 'refuser')">Refuser</button>
-          </div>
-        </div>
-      </div>`;
-
-    notificationsList.insertAdjacentHTML('afterbegin', cardHTML);
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': getCookie('csrftoken')
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'ok') {
+        mettreAJourNotificationInvitation(invitationId, accepter ? 'acceptee' : 'refusee');
+      } else {
+        alert("Erreur: " + (data.message || "Une erreur est survenue"));
+      }
+    })
+    .catch(() => alert("Erreur réseau"));
   }
 
   function mettreAJourNotificationInvitation(invitation_id, statut) {
@@ -177,32 +136,6 @@
     btns.forEach(b => b.remove());
   }
 
-  // ✅ Fonction globale
-  window.repondreInvitation = function (invitationId, accepter) {
-    const url = accepter
-      ? `/invitation-accepter/${invitationId}/`
-      : `/invitation-refuser/${invitationId}/`;
-
-    fetch(url, {
-      method: 'POST',
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'X-CSRFToken': getCookie('csrftoken'),
-      },
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.status === 'ok') {
-        mettreAJourNotificationInvitation(invitationId, accepter ? 'acceptee' : 'refusee');
-      } else {
-        alert("Erreur: " + (data.message || "Une erreur est survenue"));
-      }
-    })
-    .catch(e => alert("Erreur réseau"));
-  };
-
-
-  // ✅ CSRF Token helper
   function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -219,8 +152,4 @@
   }
 </script>
 
-
-
-
 {% endblock %}
-
