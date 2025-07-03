@@ -341,10 +341,10 @@ body {
 <audio id="ringtone" src="{% static 'sounds/ringtone.mp3' %}" preload="auto"></audio>
 
 <script>
-  document.addEventListener("click", () => {
-  const son = document.getElementById("ringtone");
-  if (son) son.play().then(() => son.pause()).catch(() => {});
-}, { once: true });
+    document.addEventListener("click", () => {
+      const son = document.getElementById("ringtone");
+      if (son) son.play().then(() => son.pause()).catch(() => { });
+    }, { once: true });
 
 
   let sonnerieTimeout = null;
@@ -399,7 +399,7 @@ body {
 
     if (data.type === "remove_message_notification") {
       mettreAJourBadgeSolola(null);
-      arreterSonnerie(); // ✅ Si on lit depuis une autre page
+      arreterSonnerie(); // Si on lit depuis une autre page
     }
   };
 
