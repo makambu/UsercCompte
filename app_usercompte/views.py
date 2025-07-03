@@ -1111,15 +1111,25 @@ def send_message_ajax(request):
 
 def liste_conversations(request):
     user_id = request.session.get("user_id")
-    utilisateur = get_object_or_404(Profil, id=user_id)
+    if not user_id:
+        return redirect('login_user')  # redirection si session vide
 
-    messages = Message.objects.filter(Q(expediteur=utilisateur) | Q(destinataire=utilisateur))
+    try:
+        utilisateur = Profil.objects.get(id=user_id)
+    except Profil.DoesNotExist:
+        request.session.flush()  # session invalide
+        return redirect('login_user')
+
+    # Récupérer tous les messages envoyés ou reçus
+    messages = Message.objects.filter(
+        Q(expediteur=utilisateur) | Q(destinataire=utilisateur)
+    )
+
     user_ids = set(messages.values_list('expediteur_id', flat=True)) | set(messages.values_list('destinataire_id', flat=True))
     user_ids.discard(utilisateur.id)
 
     conversations = Profil.objects.filter(id__in=user_ids)
 
-    # Dernier message par utilisateur
     last_messages = {}
     messages_non_lus = {}
 
@@ -1131,28 +1141,27 @@ def liste_conversations(request):
 
         if last_msg:
             last_messages[user.id] = last_msg
-
-            # Messages non lus
             if last_msg.destinataire == utilisateur and not last_msg.lu:
                 messages_non_lus[user.id] = True
 
-    # Tri des conversations : plus récent d'abord
     sorted_conversations = sorted(
         conversations,
         key=lambda u: last_messages.get(u.id).date_envoi if last_messages.get(u.id) else None,
         reverse=True
     )
 
-    # Utilisateurs en ligne (inchangé)
-    en_ligne_ids = list(Profil.objects.filter(is_online=True).values_list('id', flat=True))
+    en_ligne_ids = list(
+        Profil.objects.filter(is_online=True).values_list('id', flat=True)
+    )
 
     return render(request, "chat_solola/liste_conversations.html", {
         "utilisateur_connecte": utilisateur,
-        "conversations": sorted_conversations,  # conversations triées ici
+        "conversations": sorted_conversations,
         "last_messages": last_messages,
         "messages_non_lus": messages_non_lus,
         "en_ligne_ids": en_ligne_ids,
     })
+
 
 def verifier_messages_non_lus(request):
     user_id = request.session.get("user_id")
