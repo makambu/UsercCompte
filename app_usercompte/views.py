@@ -672,22 +672,20 @@ def BlogViews(request):
     
 
 def notice_view(request):
-    user_id = request.session.get('user_id')
-    if not user_id:
-        return redirect('login_user')
-
+    user_id = request.session.get("user_id")
     utilisateur = get_object_or_404(Profil, id=user_id)
 
-    Notification.objects.filter(destinataire=utilisateur, est_lue=False).update(est_lue=True)
+    notifications = Notification.objects.filter(recepteur=utilisateur).order_by('-date')
 
-    notifications = Notification.objects.filter(destinataire=utilisateur).order_by('-date')
-
-    invitations = InvitationAmi.objects.filter(recepteur=utilisateur, statut="envoyee").select_related("emetteur")
+    invitations = InvitationAmi.objects.filter(
+        recepteur=utilisateur,
+        statut="envoyee"
+    )
 
     return render(request, 'notices.html', {
-        'utilisateur_connecte': utilisateur,
-        'notifications': notifications,
-        'invitations': invitations,  # 👈 nouveau
+        "utilisateur_connecte": utilisateur,
+        "notifications": notifications,
+        "invitations": invitations,
     })
 
 

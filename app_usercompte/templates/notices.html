@@ -178,7 +178,7 @@
 
   // Fonction AJAX accepter/refuser invitation
   function repondreInvitation(invitationId, accepter) {
-    const url = accepter ? `/invitation/accepter/${invitationId}/` : `/invitation/refuser/${invitationId}/`;
+    const url = accepter ? `/invitation-accepter/${invitationId}/` : `/invitation-refuser/${invitationId}/`;;
     fetch(url, {
       method: 'POST',
       headers: {
