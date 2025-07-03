@@ -23,13 +23,26 @@ def decode_base64_file(data, filename):
 # ====================================
 # ✅ ChatConsumer (pour chat socket)
 # ====================================
+import json
+import logging
+from channels.generic.websocket import AsyncWebsocketConsumer
+from asgiref.sync import sync_to_async
+from .models import Message, Profil
+from .utils import decode_base64_file  # ta fonction perso pour décoder base64
+import cloudinary.uploader
+
+logger = logging.getLogger(__name__)
+
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
         self.room_group_name = f"chat_{self.room_name}"
         self.user_id = self.scope["user"].id if self.scope["user"].is_authenticated else None
 
+        # Joindre le groupe chat
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+
+        # Joindre le groupe notification spécifique utilisateur
         if self.user_id:
             await self.channel_layer.group_add(f"notif_{self.user_id}", self.channel_name)
             logger.info(f"[CONNECT CHAT] Connecté à notif_{self.user_id}")
@@ -45,12 +58,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         logger.info(f"[RECEIVE CHAT] : {data}")
 
+        # Marquer messages lus
         if data.get("type") == "messages_read":
-            await sync_to_async(Message.objects.filter(
-                expediteur_id=data["destinataire_id"],
-                destinataire_id=data["expediteur_id"],
-                lu=False
-            ).update)(lu=True)
+            await sync_to_async(
+                Message.objects.filter(
+                    expediteur_id=data["destinataire_id"],
+                    destinataire_id=data["expediteur_id"],
+                    lu=False
+                ).update
+            )(lu=True)
             await self.channel_layer.group_send(
                 f"notif_{data['expediteur_id']}",
                 {"type": "remove_notification", "from_id": data["destinataire_id"]}
@@ -60,12 +76,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         expediteur_id = data.get("expediteur_id")
         destinataire_id = data.get("destinataire_id")
         expediteur_nom = data.get("expediteur_nom")
-        if not (expediteur_id and destinataire_id and expediteur_nom): return
+        if not (expediteur_id and destinataire_id and expediteur_nom):
+            return
 
         expediteur = await sync_to_async(Profil.objects.get)(id=expediteur_id)
         destinataire = await sync_to_async(Profil.objects.get)(id=destinataire_id)
 
-        # ✅ Message texte
+        # Message texte
         if "message" in data:
             msg = await sync_to_async(Message.objects.create)(
                 expediteur=expediteur,
@@ -81,27 +98,56 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     "expediteur_id": expediteur_id,
                 }
             )
+            # Notification pour destinataire
+            await self.channel_layer.group_send(
+                f"notif_{destinataire_id}",
+                {
+                    "type": "new_notification",
+                    "from_id": expediteur_id
+                }
+            )
 
         # Message fichier
         elif "file" in data:
             try:
                 decoded_file = decode_base64_file(data["file"], data["file_name"])
 
-                # Upload vers Cloudinary
-                upload_result = await sync_to_async(cloudinary.uploader.upload)(
+                # Utiliser upload_large pour les gros fichiers
+                upload_result = await sync_to_async(cloudinary.uploader.upload_large)(
                     decoded_file,
                     folder="chat_fichiers/",
                     resource_type="auto"
                 )
 
-                file_url = upload_result.get("secure_url")
-                file_name = upload_result.get("original_filename") + '.' + upload_result.get("format")
-                file_ext = upload_result.get("format")
+                public_id = upload_result.get("public_id")
+                resource_type = upload_result.get("resource_type")
+                secure_url = upload_result.get("secure_url")
+                file_format = upload_result.get("format", "").lower()
+
+                # Détermination du type_fichier pour affichage
+                if resource_type == "image":
+                    type_fichier = "image"
+                elif resource_type == "video":
+                    type_fichier = "video"
+                elif file_format == "pdf":
+                    type_fichier = "pdf"
+                elif file_format in ["doc", "docx"]:
+                    type_fichier = "doc"
+                elif file_format in ["xls", "xlsx", "csv"]:
+                    type_fichier = "xls"
+                else:
+                    type_fichier = "autre"
+
+                # Création du Message avec un CloudinaryResource (compatible CloudinaryField)
+                from cloudinary.models import CloudinaryResource
+                fichier_cloudinary = CloudinaryResource(public_id=public_id, resource_type=resource_type)
 
                 msg = await sync_to_async(Message.objects.create)(
                     expediteur=expediteur,
                     destinataire=destinataire,
-                    fichier=file_url  # ⚠️ Important : tu enregistres ici l'URL (CloudinaryField accepte)
+                    contenu="",
+                    fichier=fichier_cloudinary,
+                    type_fichier=type_fichier
                 )
 
                 await self.channel_layer.group_send(
@@ -111,9 +157,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         "message": "",
                         "expediteur": expediteur_nom,
                         "expediteur_id": expediteur_id,
-                        "file_url": file_url,
-                        "file_name": file_name,
-                        "file_ext": file_ext,
+                        "file_url": secure_url,
+                        "file_name": data["file_name"],
+                        "file_ext": file_format,
                     }
                 )
 
@@ -125,10 +171,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         "from_id": expediteur_id
                     }
                 )
-
             except Exception as e:
                 logger.error(f"[FILE ERROR] {str(e)}")
-
 
         # Appel vocal - démarrage
         elif data.get("type") == "call_start":
@@ -192,9 +236,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "from_id": event["from_id"]
         }))
 
-# ====================================
-# ✅ NotificationConsumer (pour appels + badge)
-# ====================================
+    async def call_incoming(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "call_incoming",
+            "from_id": event["from_id"],
+            "from_name": event["from_name"]
+        }))
+
+
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.user_id = self.scope["session"].get("user_id")

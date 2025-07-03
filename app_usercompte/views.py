@@ -1,3 +1,4 @@
+from cloudinary.models import CloudinaryResource
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
@@ -965,15 +966,19 @@ def chat_view(request, user_id):
     user_connecte = get_object_or_404(Profil, id=request.session.get('user_id'))
     user_cible = get_object_or_404(Profil, id=user_id)
 
-    # Marquer les messages comme lus
-    Message.objects.filter(expediteur=user_cible, destinataire=user_connecte, lu=False).update(lu=True, notifie=True)
+    # Marquer messages comme lus + notifie=True (pour badge notif)
+    Message.objects.filter(
+        expediteur=user_cible,
+        destinataire=user_connecte,
+        lu=False
+    ).update(lu=True, notifie=True)
 
     messages = Message.objects.filter(
         Q(expediteur=user_connecte, destinataire=user_cible) |
         Q(expediteur=user_cible, destinataire=user_connecte)
     ).order_by("date_envoi")
 
-    en_ligne = user_cible.is_online
+    en_ligne = getattr(user_cible, "is_online", False)  # Sécurité au cas où
 
     return render(request, "chat_solola/chat_page.html", {
         'utilisateur_connecte': user_connecte,
@@ -988,8 +993,11 @@ def send_message_ajax(request):
     if request.method == "POST":
         expediteur_id = request.session.get('user_id')
         destinataire_id = request.POST.get("destinataire_id")
-        contenu = request.POST.get("contenu", "")
+        contenu = request.POST.get("contenu", "").strip()
         fichier = request.FILES.get("fichier")
+
+        if not expediteur_id or not destinataire_id:
+            return JsonResponse({"status": "error", "message": "Paramètres manquants"}, status=400)
 
         expediteur = get_object_or_404(Profil, id=expediteur_id)
         destinataire = get_object_or_404(Profil, id=destinataire_id)
@@ -1007,12 +1015,9 @@ def send_message_ajax(request):
             public_id = result.get("public_id")
             resource_type = result.get("resource_type")
 
-            # Reconstruire un objet compatible avec CloudinaryField
-            from cloudinary.models import CloudinaryResource
             fichier_cloudinary = CloudinaryResource(public_id=public_id, resource_type=resource_type)
 
-            # Déduction du type fichier pour affichage dans le chat
-            content_type = fichier.content_type
+            content_type = fichier.content_type.lower()
             if content_type.startswith("image"):
                 type_fichier = "image"
             elif content_type.startswith("video"):
@@ -1041,7 +1046,7 @@ def send_message_ajax(request):
             "type_fichier": msg.type_fichier
         })
 
-    return JsonResponse({"status": "error"})
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"}, status=405)
 
 def liste_conversations(request):
     user_id = request.session.get("user_id")
