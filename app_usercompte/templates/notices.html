@@ -103,6 +103,13 @@
   {% endif %}
 </div>
 
+
+
+{% endblock %}
+
+
+
+{% block scripts %}
 <script>
   // WebSocket setup
   const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
@@ -211,8 +218,5 @@
     return cookieValue;
   }
 </script>
-
-
-
 
 {% endblock %}
