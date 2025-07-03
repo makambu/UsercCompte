@@ -29,8 +29,6 @@ from django.views.decorators.csrf import csrf_protect
 import cloudinary
 
 
-# Create your views here.
-
 def splash_view(request):
     user_id = request.session.get('user_id')
 

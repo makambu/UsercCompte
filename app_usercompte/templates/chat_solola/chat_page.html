@@ -336,59 +336,45 @@ body {
 <!-- Conteneur pour toasts -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 9999;"></div>
 
-
-
 <audio id="ringtone" src="{% static 'sounds/ringtone.mp3' %}" preload="auto"></audio>
 
 <script>
-    document.addEventListener("click", () => {
-      const son = document.getElementById("ringtone");
-      if (son) son.play().then(() => son.pause()).catch(() => { });
-    }, { once: true });
-
-
-  let sonnerieTimeout = null;
+  // ===== Sonnerie au premier clic (autorisation audio) =====
+  document.addEventListener("click", () => {
     const son = document.getElementById("ringtone");
+    if (son) son.play().then(() => son.pause()).catch(() => { });
+  }, { once: true });
 
-    function jouerSonnerieNotification() {
-      if (!son) return;
+  // ===== Variables sonnerie =====
+  let sonnerieTimeout = null;
+  const son = document.getElementById("ringtone");
 
-      son.currentTime = 0;
-      son.play().catch(e => console.warn("Son bloqué :", e));
+  function jouerSonnerieNotification() {
+    if (!son) return;
+    son.currentTime = 0;
+    son.play().catch(e => console.warn("Son bloqué :", e));
+    if (sonnerieTimeout) clearTimeout(sonnerieTimeout);
+    sonnerieTimeout = setTimeout(() => son.pause(), 10000);
+  }
 
-      if (sonnerieTimeout) clearTimeout(sonnerieTimeout);
-      sonnerieTimeout = setTimeout(() => {
-        son.pause();
-      }, 10000); // Arrêt au bout de 10 secondes
-    }
+  function arreterSonnerie() {
+    if (son) son.pause();
+    if (sonnerieTimeout) clearTimeout(sonnerieTimeout);
+  }
 
-    function arreterSonnerie() {
-      if (son) son.pause();
-      if (sonnerieTimeout) clearTimeout(sonnerieTimeout);
-    }
-
-  // Variables globales utiles
+  // ===== WebSocket Notifications =====
   const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
-
-  // WebSocket Notifications
   const notifSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/notifications/`);
 
-  notifSocket.onopen = function () {
-    console.log("WebSocket Notifications connecté.");
-  };
+  notifSocket.onopen = () => console.log("WebSocket Notifications connecté.");
 
- notifSocket.onmessage = function (e) {
+  notifSocket.onmessage = function (e) {
     const data = JSON.parse(e.data);
     console.log("📥 Notification reçue :", data);
 
     if (data.type === "new_message_notification") {
-      // Badge en temps réel
       mettreAJourBadgeSolola(null);
-
-      // Jouer la sonnerie 10s max
       jouerSonnerieNotification();
-
-      // Afficher Toast + Notification Desktop
       fetch(`/ajax/nom_utilisateur/${data.from_id}/`)
         .then(res => res.json())
         .then(info => {
@@ -399,31 +385,25 @@ body {
 
     if (data.type === "remove_message_notification") {
       mettreAJourBadgeSolola(null);
-      arreterSonnerie(); // Si on lit depuis une autre page
+      arreterSonnerie();
     }
   };
 
-  notifSocket.onerror = function (e) {
-    console.error("Erreur WebSocket Notifications :", e);
-  };
+  notifSocket.onerror = (e) => console.error("Erreur WebSocket Notifications :", e);
+  notifSocket.onclose = () => console.warn("WebSocket Notifications fermé.");
 
-  notifSocket.onclose = function () {
-    console.warn("WebSocket Notifications fermé.");
-  };
-
-  // AJAX périodiques
+  // ===== Vérification périodique =====
   function verifierMessagesNonLus() {
     fetch("{% url 'verifier_messages' %}")
       .then(res => res.json())
       .then(data => {
         if (data.status === "jouer_sonnerie") {
-          const son = document.getElementById("ringtone");
           son.play();
         }
       });
   }
 
- function mettreAJourBadgeSolola(nb = null) {
+  function mettreAJourBadgeSolola(nb = null) {
     const badge = document.getElementById("sololaBadge");
     const count = document.getElementById("sololaCount");
 
@@ -453,19 +433,12 @@ body {
         });
     }
   }
-  setInterval(verifierMessagesNonLus, 30000); // toutes les 30s
-  setInterval(() => mettreAJourBadgeSolola(null), 15000); // toutes les 15s fallback
 
-  // Variables chat et WebSocket chat
+  setInterval(verifierMessagesNonLus, 30000);
+  setInterval(() => mettreAJourBadgeSolola(null), 15000);
+
+  // ===== Chat WebSocket =====
   const chatBox = document.getElementById("chatBox");
-  function scrollChatToBottom() {
-      if (chatBox) {
-        setTimeout(() => {
-          chatBox.scrollTop = chatBox.scrollHeight;
-        }, 100);
-      }
-    }
-
 
   const messageForm = document.getElementById("messageForm");
   const inputText = messageForm ? messageForm.elements.contenu : null;
@@ -478,31 +451,24 @@ body {
   const roomName = `${Math.min(expediteurId, destinataireId)}_${Math.max(expediteurId, destinataireId)}`;
   const chatSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/chat/${roomName}/`);
 
-  // Scroll vers le bas
   function scrollChatToBottom() {
-    if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+    if (chatBox) {
+      setTimeout(() => chatBox.scrollTop = chatBox.scrollHeight, 100);
+    }
   }
 
-    chatSocket.onopen = function () {
-      console.log("📡 WebSocket Chat connecté.");
-      chatSocket.send(JSON.stringify({
-        type: "messages_read",
-        expediteur_id: destinataireId,
-        destinataire_id: expediteurId
-      }));
-
-      // Arrêt immédiat si on lit
-      arreterSonnerie();
-    };
-
-
-  chatSocket.onclose = function () {
-    console.warn("WebSocket Chat fermé.");
+  chatSocket.onopen = function () {
+    console.log("📡 WebSocket Chat connecté.");
+    chatSocket.send(JSON.stringify({
+      type: "messages_read",
+      expediteur_id: destinataireId,
+      destinataire_id: expediteurId
+    }));
+    arreterSonnerie();
   };
 
-  chatSocket.onerror = function (e) {
-    console.error("Erreur WebSocket Chat :", e);
-  };
+  chatSocket.onclose = () => console.warn("WebSocket Chat fermé.");
+  chatSocket.onerror = (e) => console.error("Erreur WebSocket Chat :", e);
 
   chatSocket.onmessage = function (e) {
     const data = JSON.parse(e.data);
@@ -510,20 +476,16 @@ body {
 
     if (!chatBox) return;
 
-    // Gestion appel vocal entrant
     if (data.type === "call_incoming") {
       document.getElementById("callUserName").innerText = data.from_name;
       document.getElementById("callModal").style.display = "flex";
-      const ringtone = document.getElementById("ringtone");
-      ringtone.currentTime = 0;
-      ringtone.play();
+      son.currentTime = 0;
+      son.play();
       return;
     }
 
-    // Gestion réponse appel
     if (data.type === "call_answered") {
-      const ringtone = document.getElementById("ringtone");
-      ringtone.pause();
+      son.pause();
       if (data.answer === "accept") {
         endCallBtn.classList.remove("d-none");
         rejectCallBtn.classList.add("d-none");
@@ -535,16 +497,13 @@ body {
       return;
     }
 
-    // Fin d'appel
     if (data.type === "call_ended") {
-      const ringtone = document.getElementById("ringtone");
-      ringtone.pause();
+      son.pause();
       callModal.style.display = "none";
       alert("L'appel a été terminé.");
       return;
     }
 
-    // Affichage message texte/fichier
     const div = document.createElement("div");
     div.className = "message " + (data.expediteur_id == expediteurId ? "envoye" : "recu");
 
@@ -574,25 +533,21 @@ body {
     scrollChatToBottom();
   };
 
-  // Envoi message texte
   if (messageForm) {
     messageForm.addEventListener("submit", function (e) {
       e.preventDefault();
       const message = inputText.value.trim();
       if (!message) return;
-
       chatSocket.send(JSON.stringify({
         message: message,
         expediteur_id: expediteurId,
         expediteur_nom: expediteurNom,
         destinataire_id: destinataireId
       }));
-
       inputText.value = "";
     });
   }
 
-  // Envoi fichiers
   if (fileInput) {
     fileInput.addEventListener("change", function () {
       if (fileInput.files.length === 0) return;
@@ -621,7 +576,7 @@ body {
     });
   }
 
-  // Enregistrement vocal
+  // ===== Enregistrement vocal =====
   let mediaRecorder;
   let recordedChunks = [];
 
@@ -677,7 +632,7 @@ body {
     });
   }
 
-  // Gestion appels vocaux
+  // ===== Gestion appels vocaux =====
   const callBtn = document.getElementById("callBtn");
   const callModal = document.getElementById("callModal");
   const ringtone = document.getElementById("ringtone");
@@ -690,16 +645,7 @@ body {
     callBtn.addEventListener("click", () => {
       alert("⏳ Cette fonctionnalité d'appel vocal sera bientôt disponible. Merci de votre patience !");
       return;
-      // Code appel vocal à activer plus tard
-      chatSocket.send(JSON.stringify({
-        type: "call_start",
-        expediteur_id: expediteurId,
-        destinataire_id: destinataireId,
-        from_name: expediteurNom
-      }));
-      callUserName.textContent = `avec ${document.querySelector('.user-name').textContent}`;
-      callModal.style.display = "flex";
-      ringtone.play();
+      // Code appel vocal à activer plus tard...
     });
   }
 
@@ -740,7 +686,7 @@ body {
     });
   }
 
-  // Emoji panel
+  // ===== Emoji panel =====
   const emojiBtn = document.getElementById("emojiBtn");
   const emojiPanel = document.getElementById("emojiPanel");
   const inputMsg = document.querySelector("input[name='contenu']");
@@ -765,16 +711,12 @@ body {
       emojiPanel.style.visibility = "visible";
     });
 
-    // Emojis
-    const emojis = ["😀", "😂", "😍", "😘", "😎", "😢", "🤔", "🙌", "🔥", "🎉", "💯", "❤️", "🤩", "😡", "😇", "😜", "🤗", "💖", "💔", "😱", "👏", "👍", "👎", "🙏",
-      "😁", "😅", "🤣", "🙂", "🙃", "😉", "🥰", "🤩", "😗", "☺️", "😚", "😋", "😜", "🤪", "🤑", "🤗", "🤭", "🤫",
-      "🤔", "🤐", "🤨", "😐", "😑", "😶", "😏", "😒", "🙄", "😬", "🤥", "😌", "😔", "😪", "🤤", "😴", "😷", "🤒", "🤕", "🤢",
-      "🤮", "🥵", "🥶", "😵", "🤯", "🤠", "🥳", "😎", "🤓", "🧐", "😕", "😟", "🙁", "☹️", "😮", "😯", "😲", "😳", "🥺", "😦",
-      "😧", "😨", "😰", "😥", "😢", "😭", "😱", "😖", "😣", "😞", "😓", "😩", "😫", "🥱", "😤", "😠", "🤬", "😈", "👿", "💀",
-      "☠️", "💩", "🤡", "👹", "👺", "👻", "👽", "👾", "🤖", "🎃", "😺", "😹", "😻", "😼", "🙀", "😿", "😾",
-      "💕", "💖", "💗", "💓", "💞", "💋", "🎉", "🎊", "🎮", "🎬", "🎭", "🎵", "🎤", "🎧", "🎯", "🏆", "👋", "🙌",
-      "🤝", "🤗", "🤟",
-    ];
+    const emojis = ["😀","😂","😍","😘","😎","😢","🤔","🙌","🔥","🎉","💯","❤️","🤩","😡","😇","😜","🤗","💖","💔","😱","👏","👍","👎","🙏",
+      "😁","😅","🤣","🙂","🙃","😉","🥰","😗","☺️","😚","😋","🤪","🤑","🤭","🤫","🤐","🤨","😐","😑","😶","😏","😒",
+      "🙄","😬","🤥","😌","😔","😪","🤤","😴","😷","🤒","🤕","🤢","🤮","🥵","🥶","😵","🤯","🤠","🥳","🤓","🧐",
+      "😕","😟","🙁","☹️","😮","😯","😲","😳","🥺","😦","😧","😨","😰","😥","😭","😱","😖","😣","😞","😓","😩",
+      "😫","🥱","😤","😠","🤬","😈","👿","💀","☠️","💩","🤡","👹","👺","👻","👽","👾","🤖","🎃","😺","😹","😻",
+      "😼","🙀","😿","😾","💕","💖","💗","💓","💞","💋","🎊","🎮","🎬","🎭","🎵","🎤","🎧","🎯","🏆","👋","🙌","🤝","🤟"];
 
     emojis.forEach(e => {
       const span = document.createElement("span");
@@ -789,17 +731,17 @@ body {
       emojiPanel.appendChild(span);
     });
 
-    document.addEventListener("click", function (event) {
+    document.addEventListener("click", function(event) {
       if (!emojiPanel.contains(event.target) && event.target !== emojiBtn) {
         emojiPanel.style.display = "none";
       }
     });
   }
 
-  // Toast notifications
+  // ===== Toast notifications =====
   function afficherToast(nom_expediteur, contenu = "") {
-    const toastHTML = `
-      <div class="toast align-items-center text-white bg-primary border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+    const toastHTML =
+      `<div class="toast align-items-center text-white bg-primary border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
           <div class="toast-body">
             📩 Message de <strong>${nom_expediteur}</strong><br>
@@ -819,7 +761,7 @@ body {
     }
   }
 
-  // Notifications desktop
+  // ===== Notifications desktop =====
   function demanderPermissionNotification() {
     if (Notification.permission === "default") {
       Notification.requestPermission();
@@ -835,7 +777,6 @@ body {
       setTimeout(() => notif.close(), 8000);
     }
   }
-  badge.classList.add("clignote");
 
   demanderPermissionNotification();
 </script>
