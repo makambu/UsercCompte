@@ -187,12 +187,14 @@ body {
 #emojiBtn:hover i {
   color: #ffcc00;
 }
-@keyframes clignote {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
 .clignote {
-  animation: clignote 1s infinite;
+  animation: clignoteBadge 1s infinite;
+}
+
+@keyframes clignoteBadge {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
 }
 </style>
 
@@ -339,6 +341,26 @@ body {
 <audio id="ringtone" src="{% static 'sounds/ringtone.mp3' %}" preload="auto"></audio>
 
 <script>
+  let sonnerieTimeout = null;
+    const son = document.getElementById("ringtone");
+
+    function jouerSonnerieNotification() {
+      if (!son) return;
+
+      son.currentTime = 0;
+      son.play().catch(e => console.warn("Son bloqué :", e));
+
+      if (sonnerieTimeout) clearTimeout(sonnerieTimeout);
+      sonnerieTimeout = setTimeout(() => {
+        son.pause();
+      }, 10000); // Arrêt au bout de 10 secondes
+    }
+
+    function arreterSonnerie() {
+      if (son) son.pause();
+      if (sonnerieTimeout) clearTimeout(sonnerieTimeout);
+    }
+
   // Variables globales utiles
   const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
 
@@ -346,32 +368,32 @@ body {
   const notifSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/notifications/`);
 
   notifSocket.onopen = function () {
-    console.log("🔔 WebSocket Notifications connecté.");
+    console.log("WebSocket Notifications connecté.");
   };
 
-  notifSocket.onmessage = function (e) {
+ notifSocket.onmessage = function (e) {
     const data = JSON.parse(e.data);
     console.log("📥 Notification reçue :", data);
 
     if (data.type === "new_message_notification") {
+      // Badge en temps réel
       mettreAJourBadgeSolola(null);
 
+      // Jouer la sonnerie 10s max
+      jouerSonnerieNotification();
+
+      // Afficher Toast + Notification Desktop
       fetch(`/ajax/nom_utilisateur/${data.from_id}/`)
         .then(res => res.json())
         .then(info => {
           afficherToast(info.nom, info.last_message || "");
           envoyerNotificationDesktop("💬 Nouveau message", `De ${info.nom}`);
         });
-        if (!data.from_id) return;
-
     }
 
     if (data.type === "remove_message_notification") {
       mettreAJourBadgeSolola(null);
-    }
-
-    if (data.type === "call_incoming") {
-      alert("📞 Appel de " + data.from_name);
+      arreterSonnerie(); // ✅ Si on lit depuis une autre page
     }
   };
 
@@ -398,6 +420,16 @@ body {
   function mettreAJourBadgeSolola(nb = null) {
     const badge = document.getElementById("sololaBadge");
     const count = document.getElementById("sololaCount");
+
+    if (data.nb > 0) {
+      badge.classList.remove("d-none");
+      badge.classList.add("clignote");
+      count.textContent = data.nb;
+    } else {
+      badge.classList.add("d-none");
+      badge.classList.remove("clignote");
+      count.textContent = "0";
+    }
 
     if (nb !== null) {
       if (nb > 0) {
@@ -452,14 +484,18 @@ body {
     if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
   }
 
-  chatSocket.onopen = function () {
-    console.log("📡 WebSocket Chat connecté.");
-    chatSocket.send(JSON.stringify({
-      type: "messages_read",
-      expediteur_id: destinataireId,
-      destinataire_id: expediteurId
-    }));
-  };
+    chatSocket.onopen = function () {
+      console.log("📡 WebSocket Chat connecté.");
+      chatSocket.send(JSON.stringify({
+        type: "messages_read",
+        expediteur_id: destinataireId,
+        destinataire_id: expediteurId
+      }));
+
+      // Arrêt immédiat si on lit
+      arreterSonnerie();
+    };
+
 
   chatSocket.onclose = function () {
     console.warn("WebSocket Chat fermé.");
