@@ -128,7 +128,6 @@
     else if (data.type === "invitation_ami_update") {
       mettreAJourNotificationInvitation(data.invitation_id, data.statut);
     }
-    // gérer aussi tes autres notifications (messages, etc.)
   };
 
   notifSocket.onerror = (e) => console.error("Erreur WebSocket Notifications :", e);
@@ -139,12 +138,11 @@
     const notificationsList = document.getElementById('notifications-list');
     if (!notificationsList) return;
 
-    // Vérifie si notification déjà affichée
     if (document.querySelector(`.card[data-notif-id="inv_${invitation.id}"]`)) return;
 
     const imgSrc = invitation.emetteur.image || "{% static 'images/image_4.png' %}";
     const nom = invitation.emetteur.nom || "Utilisateur";
-    const profilUrl = `/profil/${invitation.emetteur.id}/`;  // adapte si besoin
+    const profilUrl = `/profil/${invitation.emetteur.id}/`;
 
     const cardHTML = `
       <div class="card shadow-sm mb-3" data-notif-id="inv_${invitation.id}">
@@ -164,7 +162,7 @@
           </div>
         </div>
       </div>`;
-
+    
     notificationsList.insertAdjacentHTML('afterbegin', cardHTML);
   }
 
@@ -173,36 +171,38 @@
     const card = document.querySelector(`.card[data-notif-id="inv_${invitation_id}"]`);
     if (!card) return;
 
-    const statusText = statut === "acceptee" ? 
-      '<span class="badge bg-success">Invitation acceptée</span>' : 
-      '<span class="badge bg-danger">Invitation refusée</span>';
+    const statusText = statut === "acceptee"
+      ? '<span class="badge bg-success">Invitation acceptée</span>'
+      : '<span class="badge bg-danger">Invitation refusée</span>';
 
     card.querySelector('div.flex-grow-1 p').innerHTML += ` — ${statusText}`;
-    // Supprime boutons
     const btns = card.querySelectorAll('button');
     btns.forEach(b => b.remove());
   }
 
-  // Fonction AJAX accepter/refuser invitation
-  function repondreInvitation(invitationId, accepter) {
-    const url = accepter ? `/invitation-accepter/${invitationId}/` : `/invitation-refuser/${invitationId}/`;;
+  // ✅ Fonction AJAX globale pour accepter/refuser invitation
+  window.repondreInvitation = function (invitationId, accepter) {
+    const url = accepter ? `/invitation-accepter/${invitationId}/` : `/invitation-refuser/${invitationId}/`;
+
     fetch(url, {
       method: 'POST',
       headers: {
         'X-Requested-With': 'XMLHttpRequest',
         'X-CSRFToken': getCookie('csrftoken'),
       },
-    }).then(res => res.json())
+    })
+      .then(res => res.json())
       .then(data => {
         if (data.status === 'ok') {
           mettreAJourNotificationInvitation(invitationId, accepter ? 'acceptee' : 'refusee');
         } else {
-          alert("Erreur: " + data.message || "Une erreur est survenue");
+          alert("Erreur: " + (data.message || "Une erreur est survenue"));
         }
-      }).catch(e => alert("Erreur réseau"));
+      })
+      .catch(e => alert("Erreur réseau"));
   }
 
-  // Helper pour CSRF token
+  // Helper CSRF
   function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -218,5 +218,4 @@
     return cookieValue;
   }
 </script>
-
 {% endblock %}
