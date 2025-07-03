@@ -38,4 +38,19 @@ class InvalidUserSessionMiddleware:
 
         return self.get_response(request)
 
+class UpdateLastActivityMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user_id = request.session.get("user_id")
+        if user_id:
+            try:
+                user = Profil.objects.get(id=user_id)
+                user.derniere_activité = timezone.now()
+                user.save(update_fields=["derniere_activité"])
+            except Profil.DoesNotExist:
+                request.session.flush()
+
+        return self.get_response(request)
 

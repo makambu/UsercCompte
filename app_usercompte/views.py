@@ -55,11 +55,10 @@ def homes(request):
     reset_requested = request.GET.get('reset') == 'true'
     search_query = request.GET.get('q', '').strip()
 
-    # Gestion du reset mot de passe via POST
+    # Gestion reset mot de passe
     if request.method == 'POST' and request.POST.get('action') == 'reset_password':
         email = request.POST.get('email')
         new_password = request.POST.get('new_password')
-
         try:
             profil = Profil.objects.get(email=email)
             profil.mot_de_passe = new_password
@@ -70,7 +69,7 @@ def homes(request):
             messages.error(request, "Email introuvable.")
             reset_requested = True
 
-    # Si pas d'utilisateur connecté (pas d'user_id en session)
+    # Si non connecté
     if not user_id:
         utilisateurs = Profil.objects.filter(status=1).order_by('-created_on')
         if search_query:
@@ -82,38 +81,47 @@ def homes(request):
             'reset_required': reset_requested,
         })
 
-    # Récupérer l'utilisateur connecté en sécurisant la requête
-    utilisateur_connecte = Profil.objects.filter(id=user_id).first()
-    if not utilisateur_connecte:
+    # Vérification de l'inactivité serveur
+    try:
+        utilisateur_connecte = Profil.objects.get(id=user_id)
+
+        if utilisateur_connecte.derniere_activité < timezone.now() - timedelta(minutes=30):
+            utilisateur_connecte.is_online = False
+            utilisateur_connecte.save()
+            request.session.flush()
+            messages.warning(request, "Session expirée pour inactivité.")
+            return redirect("login_user")
+
+    except Profil.DoesNotExist:
         request.session.flush()
-        messages.error(request, "Votre compte a été supprimé. Veuillez vous reconnecter.")
         return redirect('login_user')
 
-    # Récupérer les autres utilisateurs (hors utilisateur connecté)
-    utilisateurs = Profil.objects.filter(status=1).exclude(id=user_id).order_by('-created_on')
+    # Mise à jour de la dernière activité
+    utilisateur_connecte.derniere_activité = timezone.now()
+    utilisateur_connecte.save()
 
-    # Nettoyer les stories expirées
+    # Filtrage des autres utilisateurs
+    utilisateurs = Profil.objects.filter(status=1).exclude(id=user_id).order_by('-created_on')
+    if search_query:
+        utilisateurs = utilisateurs.filter(Q(nom__icontains=search_query) | Q(prenom__icontains=search_query))
+
+    # Suppression stories expirées
     now = timezone.now()
     Story.objects.filter(expire_le__lt=now).delete()
 
-    # Récupérer la dernière story non expirée par auteur
+    # Récup stories les plus récentes par auteur
     latest_stories = (
         Story.objects
         .filter(expire_le__gte=now)
         .values("auteur_id")
         .annotate(latest_date=Max("date_creation"))
     )
-
     story_queryset = Story.objects.filter(
         expire_le__gte=now,
         date_creation__in=[item['latest_date'] for item in latest_stories]
     ).select_related('auteur')
 
-    # Appliquer recherche sur utilisateurs si besoin
-    if search_query:
-        utilisateurs = utilisateurs.filter(Q(nom__icontains=search_query) | Q(prenom__icontains=search_query))
-
-    # Compter les notifications non lues
+    # Notifications non lues
     total_notices = utilisateur_connecte.notifications.filter(est_lue=False).count()
 
     return render(request, 'base.html', {
@@ -125,7 +133,6 @@ def homes(request):
         'reset_required': reset_requested,
         'stories': story_queryset,
     })
-
 
 def login_user(request):
     if request.method == 'POST':
@@ -667,22 +674,20 @@ def BlogViews(request):
 def notice_view(request):
     user_id = request.session.get('user_id')
     if not user_id:
-        return redirect('homes')
+        return redirect('login_user')
 
-    utilisateur_connecte = get_object_or_404(Profil, id=user_id)
+    utilisateur = get_object_or_404(Profil, id=user_id)
 
-    # Marquer comme lues
-    Notification.objects.filter(destinataire=utilisateur_connecte, est_lue=False).update(est_lue=True)
+    Notification.objects.filter(destinataire=utilisateur, est_lue=False).update(est_lue=True)
 
+    notifications = Notification.objects.filter(destinataire=utilisateur).order_by('-date')
 
-    # Charger toutes les notifications (blogs, comptes, vidéos…)
-    notifications = Notification.objects.filter(
-        destinataire=utilisateur_connecte
-    ).order_by('-date')
+    invitations = InvitationAmi.objects.filter(recepteur=utilisateur, statut="envoyee").select_related("emetteur")
 
     return render(request, 'notices.html', {
-        'utilisateur_connecte': utilisateur_connecte,
-        'notifications': notifications
+        'utilisateur_connecte': utilisateur,
+        'notifications': notifications,
+        'invitations': invitations,  # 👈 nouveau
     })
 
 

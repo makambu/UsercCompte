@@ -37,6 +37,7 @@ class Profil(models.Model):
     update_on = models.DateTimeField(auto_now=True)
     status = models.IntegerField(choices=STATUS, default=1)
     derniere_connexion = models.DateTimeField(null=True, blank=True)
+    derniere_activité = models.DateTimeField(default=timezone.now)
     is_online = models.BooleanField(default=False)  # Nouveau champ
     likes = models.ManyToManyField('self', symmetrical=False, blank=True, related_name='liked_by')
 

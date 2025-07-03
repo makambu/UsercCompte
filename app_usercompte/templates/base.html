@@ -525,53 +525,6 @@ function logoutUser() {
 
 </script>
 
-<script>
-let inactivityTimeout = null;
-let isRefreshing = false; // Utilisé pour différencier un rafraîchissement d'une vraie fermeture
-
-// --- Déconnexion AJAX ---
-function logoutUser() {
-    navigator.sendBeacon("{% url 'logout_ajax' %}");
-}
-
-// --- Timer d'inactivité (30 minutes) ---
-function resetInactivityTimer() {
-    if (inactivityTimeout) clearTimeout(inactivityTimeout);
-
-    inactivityTimeout = setTimeout(() => {
-        logoutUser();
-        // Redirection après déconnexion
-        window.location.href = "{% url 'login_user' %}";
-    }, 30 * 60 * 1000); // 30 minutes
-}
-
-// --- Réinitialiser le timer sur interaction ---
-['click', 'keydown', 'mousemove', 'scroll', 'touchstart'].forEach(event => {
-    window.addEventListener(event, resetInactivityTimer);
-});
-
-// --- Lancer le timer au démarrage ---
-resetInactivityTimer();
-
-
-// ============================
-// 🔒 Gestion fermeture / refresh
-// ============================
-
-// Marque un refresh pour éviter la déconnexion
-window.addEventListener("beforeunload", () => {
-    isRefreshing = true;
-});
-
-// Si ce n’est pas un refresh => déconnexion
-window.addEventListener("pagehide", (event) => {
-    if (!isRefreshing) {
-        logoutUser();
-    }
-});
-</script>
-
-
 
 <script>
 let storyTimeout = null;
