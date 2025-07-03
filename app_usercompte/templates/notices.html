@@ -105,29 +105,24 @@
 
 
 <script>
-  // WebSocket setup
   const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
   const notifSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/notifications/`);
 
-  notifSocket.onopen = () => console.log("WebSocket Notifications connecté.");
+  notifSocket.onopen = () => console.log("✅ WebSocket Notifications connecté.");
+  notifSocket.onerror = (e) => console.error("❌ Erreur WebSocket :", e);
+  notifSocket.onclose = () => console.warn("⚠️ WebSocket Notifications fermé.");
 
   notifSocket.onmessage = (e) => {
     const data = JSON.parse(e.data);
-    console.log("Notification WS reçue :", data);
+    console.log("📩 Notification WS reçue :", data);
 
-    // Gestion invitation ami
     if (data.type === "invitation_ami") {
       ajouterNotificationInvitation(data.invitation);
-    }
-    else if (data.type === "invitation_ami_update") {
+    } else if (data.type === "invitation_ami_update") {
       mettreAJourNotificationInvitation(data.invitation_id, data.statut);
     }
   };
 
-  notifSocket.onerror = (e) => console.error("Erreur WebSocket Notifications :", e);
-  notifSocket.onclose = () => console.warn("WebSocket Notifications fermé.");
-
-  // Fonction qui crée la notification invitation ami avec boutons Accepter/Refuser
   function ajouterNotificationInvitation(invitation) {
     const notificationsList = document.getElementById('notifications-list');
     if (!notificationsList) return;
@@ -151,8 +146,8 @@
             <small class="text-muted">${new Date(invitation.date_envoi).toLocaleString()}</small>
           </div>
           <div>
-            <button class="btn btn-success btn-sm me-2" onclick="repondreInvitation('${invitation.id}', true)">Accepter</button>
-            <button class="btn btn-danger btn-sm" onclick="repondreInvitation('${invitation.id}', false)">Refuser</button>
+            <button class="btn btn-success btn-sm me-2" onclick="gererInvitation(${invitation.id}, 'accepter')">Accepter</button>
+            <button class="btn btn-danger btn-sm" onclick="gererInvitation(${invitation.id}, 'refuser')">Refuser</button>
           </div>
         </div>
       </div>`;
@@ -160,7 +155,6 @@
     notificationsList.insertAdjacentHTML('afterbegin', cardHTML);
   }
 
-  // Fonction qui met à jour la notification après réponse
   function mettreAJourNotificationInvitation(invitation_id, statut) {
     const card = document.querySelector(`.card[data-notif-id="inv_${invitation_id}"]`);
     if (!card) return;
@@ -169,12 +163,14 @@
       ? '<span class="badge bg-success">Invitation acceptée</span>'
       : '<span class="badge bg-danger">Invitation refusée</span>';
 
-    card.querySelector('div.flex-grow-1 p').innerHTML += ` — ${statusText}`;
+    const textEl = card.querySelector('div.flex-grow-1 p');
+    if (textEl) textEl.innerHTML += ` — ${statusText}`;
+
     const btns = card.querySelectorAll('button');
     btns.forEach(b => b.remove());
   }
 
-  // ✅ Fonction AJAX globale pour accepter/refuser invitation
+  // Fonction AJAX principale
   window.repondreInvitation = function (invitationId, accepter) {
     const url = accepter
       ? `/invitation-accepter/${invitationId}/`
@@ -196,9 +192,14 @@
         }
       })
       .catch(e => alert("Erreur réseau"));
-  }
+  };
 
-  // Helper CSRF
+  // Intermédiaire pour répondre au onclick de ton HTML
+  window.gererInvitation = function (id, action) {
+    repondreInvitation(id, action === 'accepter');
+  };
+
+  // Helper pour CSRF
   function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -213,12 +214,8 @@
     }
     return cookieValue;
   }
-
-  // Facultatif : wrapper pour permettre usage de gererInvitation()
-  window.gererInvitation = function (id, action) {
-    repondreInvitation(id, action === 'accepter');
-  }
 </script>
+
 
 
 {% endblock %}
