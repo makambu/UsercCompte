@@ -336,59 +336,51 @@ body {
 <!-- Conteneur pour toasts -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 9999;"></div>
 
-
-
 <audio id="ringtone" src="{% static 'sounds/ringtone.mp3' %}" preload="auto"></audio>
 
 <script>
-    document.addEventListener("click", () => {
-      const son = document.getElementById("ringtone");
-      if (son) son.play().then(() => son.pause()).catch(() => { });
-    }, { once: true });
-
+  // Lecture du son de notification au premier clic (pour contourner les blocages navigateur)
+  document.addEventListener("click", () => {
+    const son = document.getElementById("ringtone");
+    if (son) son.play().then(() => son.pause()).catch(() => {});
+  }, { once: true });
 
   let sonnerieTimeout = null;
-    const son = document.getElementById("ringtone");
+  const son = document.getElementById("ringtone");
 
-    function jouerSonnerieNotification() {
-      if (!son) return;
+  function jouerSonnerieNotification() {
+    if (!son) return;
+    son.currentTime = 0;
+    son.play().catch(e => console.warn("Son bloqué :", e));
+    if (sonnerieTimeout) clearTimeout(sonnerieTimeout);
+    sonnerieTimeout = setTimeout(() => {
+      son.pause();
+    }, 10000);
+  }
 
-      son.currentTime = 0;
-      son.play().catch(e => console.warn("Son bloqué :", e));
+  function arreterSonnerie() {
+    if (son) son.pause();
+    if (sonnerieTimeout) clearTimeout(sonnerieTimeout);
+  }
 
-      if (sonnerieTimeout) clearTimeout(sonnerieTimeout);
-      sonnerieTimeout = setTimeout(() => {
-        son.pause();
-      }, 10000); // Arrêt au bout de 10 secondes
-    }
-
-    function arreterSonnerie() {
-      if (son) son.pause();
-      if (sonnerieTimeout) clearTimeout(sonnerieTimeout);
-    }
-
-  // Variables globales utiles
+  // Choix du protocole WS/WSS selon HTTPS ou HTTP
   const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
 
-  // WebSocket Notifications
+  // WebSocket Notifications - Connexion globale à toutes les pages
   const notifSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/notifications/`);
 
   notifSocket.onopen = function () {
     console.log("WebSocket Notifications connecté.");
   };
 
- notifSocket.onmessage = function (e) {
+  notifSocket.onmessage = function (e) {
     const data = JSON.parse(e.data);
     console.log("📥 Notification reçue :", data);
 
     if (data.type === "new_message_notification") {
-      // Badge en temps réel
       mettreAJourBadgeSolola(null);
-
-      // Jouer la sonnerie 10s max
       jouerSonnerieNotification();
 
-      // Afficher Toast + Notification Desktop
       fetch(`/ajax/nom_utilisateur/${data.from_id}/`)
         .then(res => res.json())
         .then(info => {
@@ -399,7 +391,7 @@ body {
 
     if (data.type === "remove_message_notification") {
       mettreAJourBadgeSolola(null);
-      arreterSonnerie(); // Si on lit depuis une autre page
+      arreterSonnerie();
     }
   };
 
@@ -411,21 +403,23 @@ body {
     console.warn("WebSocket Notifications fermé.");
   };
 
-  // AJAX périodiques
+  // Vérification périodique des messages non lus (fallback)
   function verifierMessagesNonLus() {
     fetch("{% url 'verifier_messages' %}")
       .then(res => res.json())
       .then(data => {
         if (data.status === "jouer_sonnerie") {
           const son = document.getElementById("ringtone");
-          son.play();
+          if (son) son.play().catch(() => {});
         }
       });
   }
 
- function mettreAJourBadgeSolola(nb = null) {
+  // Mise à jour du badge de notification de messages
+  function mettreAJourBadgeSolola(nb = null) {
     const badge = document.getElementById("sololaBadge");
     const count = document.getElementById("sololaCount");
+    if (!badge || !count) return;
 
     if (nb !== null) {
       if (nb > 0) {
@@ -453,24 +447,18 @@ body {
         });
     }
   }
-  setInterval(verifierMessagesNonLus, 30000); // toutes les 30s
-  setInterval(() => mettreAJourBadgeSolola(null), 15000); // toutes les 15s fallback
 
-  // Variables chat et WebSocket chat
-  const chatBox = document.getElementById("chatBox");
-  function scrollChatToBottom() {
-      if (chatBox) {
-        setTimeout(() => {
-          chatBox.scrollTop = chatBox.scrollHeight;
-        }, 100);
-      }
-    }
+  // Intervalles de vérification régulière
+  setInterval(verifierMessagesNonLus, 30000);
+  setInterval(() => mettreAJourBadgeSolola(null), 15000);
 
+  // -----------------------------------------------------------
+  // Partie chat (uniquement si sur page chat)
 
   const messageForm = document.getElementById("messageForm");
-  const inputText = messageForm ? messageForm.elements.contenu : null;
-  const fileInput = document.getElementById("fileInput");
+  const chatBox = document.getElementById("chatBox");
 
+  {% if user_cible %}
   const expediteurId = Number("{{ utilisateur_connecte.id }}");
   const destinataireId = Number("{{ user_cible.id }}");
   const expediteurNom = "{{ utilisateur_connecte.nom }}";
@@ -478,23 +466,15 @@ body {
   const roomName = `${Math.min(expediteurId, destinataireId)}_${Math.max(expediteurId, destinataireId)}`;
   const chatSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/chat/${roomName}/`);
 
-  // Scroll vers le bas
-  function scrollChatToBottom() {
-    if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
-  }
-
-    chatSocket.onopen = function () {
-      console.log("📡 WebSocket Chat connecté.");
-      chatSocket.send(JSON.stringify({
-        type: "messages_read",
-        expediteur_id: destinataireId,
-        destinataire_id: expediteurId
-      }));
-
-      // Arrêt immédiat si on lit
-      arreterSonnerie();
-    };
-
+  chatSocket.onopen = function () {
+    console.log("📡 WebSocket Chat connecté.");
+    chatSocket.send(JSON.stringify({
+      type: "messages_read",
+      expediteur_id: destinataireId,
+      destinataire_id: expediteurId
+    }));
+    arreterSonnerie();
+  };
 
   chatSocket.onclose = function () {
     console.warn("WebSocket Chat fermé.");
@@ -512,34 +492,43 @@ body {
 
     // Gestion appel vocal entrant
     if (data.type === "call_incoming") {
-      document.getElementById("callUserName").innerText = data.from_name;
-      document.getElementById("callModal").style.display = "flex";
+      const callModal = document.getElementById("callModal");
+      const callUserName = document.getElementById("callUserName");
       const ringtone = document.getElementById("ringtone");
-      ringtone.currentTime = 0;
-      ringtone.play();
+      if (callUserName && callModal && ringtone) {
+        callUserName.innerText = data.from_name;
+        callModal.style.display = "flex";
+        ringtone.currentTime = 0;
+        ringtone.play();
+      }
       return;
     }
 
-    // Gestion réponse appel
     if (data.type === "call_answered") {
       const ringtone = document.getElementById("ringtone");
-      ringtone.pause();
+      const callModal = document.getElementById("callModal");
+      const endCallBtn = document.getElementById("endCall");
+      const rejectCallBtn = document.getElementById("rejectCall");
+      const acceptCallBtn = document.getElementById("acceptCall");
+
+      if (ringtone) ringtone.pause();
+
       if (data.answer === "accept") {
-        endCallBtn.classList.remove("d-none");
-        rejectCallBtn.classList.add("d-none");
-        acceptCallBtn.classList.add("d-none");
+        if (endCallBtn) endCallBtn.classList.remove("d-none");
+        if (rejectCallBtn) rejectCallBtn.classList.add("d-none");
+        if (acceptCallBtn) acceptCallBtn.classList.add("d-none");
       } else {
-        callModal.style.display = "none";
+        if (callModal) callModal.style.display = "none";
         alert("L'utilisateur a rejeté l'appel.");
       }
       return;
     }
 
-    // Fin d'appel
     if (data.type === "call_ended") {
       const ringtone = document.getElementById("ringtone");
-      ringtone.pause();
-      callModal.style.display = "none";
+      const callModal = document.getElementById("callModal");
+      if (ringtone) ringtone.pause();
+      if (callModal) callModal.style.display = "none";
       alert("L'appel a été terminé.");
       return;
     }
@@ -571,11 +560,12 @@ body {
     contenu += `<small>${data.expediteur_id == expediteurId ? "Moi" : data.expediteur} • Maintenant</small>`;
     div.innerHTML = contenu;
     chatBox.appendChild(div);
-    scrollChatToBottom();
+    chatBox.scrollTop = chatBox.scrollHeight;
   };
 
   // Envoi message texte
   if (messageForm) {
+    const inputText = messageForm.elements.contenu;
     messageForm.addEventListener("submit", function (e) {
       e.preventDefault();
       const message = inputText.value.trim();
@@ -593,6 +583,7 @@ body {
   }
 
   // Envoi fichiers
+  const fileInput = document.getElementById("fileInput");
   if (fileInput) {
     fileInput.addEventListener("change", function () {
       if (fileInput.files.length === 0) return;
@@ -603,7 +594,7 @@ body {
       tempMsg.className = "message envoyee uploading-message";
       tempMsg.textContent = `Envoi de « ${file.name} » en cours...`;
       chatBox.appendChild(tempMsg);
-      scrollChatToBottom();
+      chatBox.scrollTop = chatBox.scrollHeight;
 
       reader.onload = function () {
         chatSocket.send(JSON.stringify({
@@ -656,13 +647,13 @@ body {
           };
 
           mediaRecorder.start();
-          recordingStatus.style.display = "inline";
+          if(recordingStatus) recordingStatus.style.display = "inline";
           recordBtn.innerHTML = `<i class="fas fa-stop"></i>`;
 
           setTimeout(() => {
             if (mediaRecorder.state === "recording") {
               mediaRecorder.stop();
-              recordingStatus.style.display = "none";
+              if(recordingStatus) recordingStatus.style.display = "none";
               recordBtn.innerHTML = `<i class="fas fa-microphone"></i>`;
             }
           }, 20000);
@@ -671,7 +662,7 @@ body {
         }
       } else if (mediaRecorder.state === "recording") {
         mediaRecorder.stop();
-        recordingStatus.style.display = "none";
+        if(recordingStatus) recordingStatus.style.display = "none";
         recordBtn.innerHTML = `<i class="fas fa-microphone"></i>`;
       }
     });
@@ -699,7 +690,7 @@ body {
       }));
       callUserName.textContent = `avec ${document.querySelector('.user-name').textContent}`;
       callModal.style.display = "flex";
-      ringtone.play();
+      if(ringtone) ringtone.play();
     });
   }
 
@@ -710,10 +701,10 @@ body {
         answer: "accept",
         from_id: expediteurId
       }));
-      ringtone.pause();
-      endCallBtn.classList.remove("d-none");
-      rejectCallBtn.classList.add("d-none");
-      acceptCallBtn.classList.add("d-none");
+      if(ringtone) ringtone.pause();
+      if(endCallBtn) endCallBtn.classList.remove("d-none");
+      if(rejectCallBtn) rejectCallBtn.classList.add("d-none");
+      if(acceptCallBtn) acceptCallBtn.classList.add("d-none");
     });
   }
 
@@ -724,8 +715,8 @@ body {
         answer: "reject",
         from_id: expediteurId
       }));
-      ringtone.pause();
-      callModal.style.display = "none";
+      if(ringtone) ringtone.pause();
+      if(callModal) callModal.style.display = "none";
     });
   }
 
@@ -735,8 +726,8 @@ body {
         type: "call_end",
         from_id: expediteurId
       }));
-      callModal.style.display = "none";
-      ringtone.pause();
+      if(callModal) callModal.style.display = "none";
+      if(ringtone) ringtone.pause();
     });
   }
 
@@ -765,80 +756,89 @@ body {
       emojiPanel.style.visibility = "visible";
     });
 
-    // Emojis
+    // Liste des emojis
     const emojis = ["😀", "😂", "😍", "😘", "😎", "😢", "🤔", "🙌", "🔥", "🎉", "💯", "❤️", "🤩", "😡", "😇", "😜", "🤗", "💖", "💔", "😱", "👏", "👍", "👎", "🙏",
       "😁", "😅", "🤣", "🙂", "🙃", "😉", "🥰", "🤩", "😗", "☺️", "😚", "😋", "😜", "🤪", "🤑", "🤗", "🤭", "🤫",
       "🤔", "🤐", "🤨", "😐", "😑", "😶", "😏", "😒", "🙄", "😬", "🤥", "😌", "😔", "😪", "🤤", "😴", "😷", "🤒", "🤕", "🤢",
       "🤮", "🥵", "🥶", "😵", "🤯", "🤠", "🥳", "😎", "🤓", "🧐", "😕", "😟", "🙁", "☹️", "😮", "😯", "😲", "😳", "🥺", "😦",
       "😧", "😨", "😰", "😥", "😢", "😭", "😱", "😖", "😣", "😞", "😓", "😩", "😫", "🥱", "😤", "😠", "🤬", "😈", "👿", "💀",
       "☠️", "💩", "🤡", "👹", "👺", "👻", "👽", "👾", "🤖", "🎃", "😺", "😹", "😻", "😼", "🙀", "😿", "😾",
-      "💕", "💖", "💗", "💓", "💞", "💋", "🎉", "🎊", "🎮", "🎬", "🎭", "🎵", "🎤", "🎧", "🎯", "🏆", "👋", "🙌",
-      "🤝", "🤗", "🤟",
-    ];
+      "💕", "💖", "💗", "💓", "💞", "💋", "🎉", "🎊", "🎮", "🎬", "🎭", "🎵", "🎤", "🎧", "🎼", "🎹", "🥁", "🎷", "🎺", "🎸"];
 
-    emojis.forEach(e => {
+    emojis.forEach(emoji => {
       const span = document.createElement("span");
+      span.textContent = emoji;
       span.style.cursor = "pointer";
-      span.style.margin = "5px";
       span.style.fontSize = "20px";
-      span.innerText = e;
-      span.onclick = () => {
-        inputMsg.value += e;
+      span.style.margin = "4px";
+      span.addEventListener("click", () => {
+        inputMsg.value += emoji;
         emojiPanel.style.display = "none";
-      };
+        inputMsg.focus();
+      });
       emojiPanel.appendChild(span);
     });
+  }
 
-    document.addEventListener("click", function (event) {
-      if (!emojiPanel.contains(event.target) && event.target !== emojiBtn) {
-        emojiPanel.style.display = "none";
-      }
+  // Toast notifications (Bootstrap 5)
+  function afficherToast(titre, message) {
+    if (!("bootstrap" in window)) return;
+
+    const toastContainerId = "toastContainerGlobal";
+    let toastContainer = document.getElementById(toastContainerId);
+    if (!toastContainer) {
+      toastContainer = document.createElement("div");
+      toastContainer.id = toastContainerId;
+      toastContainer.style.position = "fixed";
+      toastContainer.style.top = "20px";
+      toastContainer.style.right = "20px";
+      toastContainer.style.zIndex = "1060";
+      document.body.appendChild(toastContainer);
+    }
+
+    const toastEl = document.createElement("div");
+    toastEl.className = "toast align-items-center text-white bg-primary border-0";
+    toastEl.setAttribute("role", "alert");
+    toastEl.setAttribute("aria-live", "assertive");
+    toastEl.setAttribute("aria-atomic", "true");
+    toastEl.style.minWidth = "250px";
+
+    toastEl.innerHTML = `
+      <div class="d-flex">
+        <div class="toast-body">
+          <strong>${titre}</strong><br>${message}
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fermer"></button>
+      </div>
+    `;
+
+    toastContainer.appendChild(toastEl);
+
+    const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
+    toast.show();
+
+    toastEl.addEventListener("hidden.bs.toast", () => {
+      toastEl.remove();
     });
   }
 
-  // Toast notifications
-  function afficherToast(nom_expediteur, contenu = "") {
-    const toastHTML = `
-      <div class="toast align-items-center text-white bg-primary border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="d-flex">
-          <div class="toast-body">
-            📩 Message de <strong>${nom_expediteur}</strong><br>
-            ${contenu ? contenu.slice(0, 80) + '…' : 'Nouveau message'}
-          </div>
-          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-      </div>`;
+  // Notifications desktop (permission requise)
+  function envoyerNotificationDesktop(titre, message) {
+    if (!("Notification" in window)) return;
 
-    const container = document.getElementById("toastContainer");
-    if (container) {
-      container.insertAdjacentHTML("beforeend", toastHTML);
-      const toastEl = container.lastElementChild;
-      const bsToast = new bootstrap.Toast(toastEl);
-      bsToast.show();
-      setTimeout(() => toastEl.remove(), 8000);
-    }
-  }
-
-  // Notifications desktop
-  function demanderPermissionNotification() {
-    if (Notification.permission === "default") {
-      Notification.requestPermission();
-    }
-  }
-
-  function envoyerNotificationDesktop(titre, corps) {
     if (Notification.permission === "granted") {
-      const notif = new Notification(titre, {
-        body: corps,
-        icon: "/static/img/logo.png"
+      new Notification(titre, { body: message, icon: "/static/img/notification_icon.png" });
+    } else if (Notification.permission !== "denied") {
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          new Notification(titre, { body: message, icon: "/static/img/notification_icon.png" });
+        }
       });
-      setTimeout(() => notif.close(), 8000);
     }
   }
-  badge.classList.add("clignote");
-
-  demanderPermissionNotification();
+{% endif %}
 </script>
+
 
 
 

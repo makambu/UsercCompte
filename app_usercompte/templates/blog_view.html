@@ -151,6 +151,514 @@
     {% endif %}
 </div>
 
+
+<!-- Conteneur pour toasts -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 9999;"></div>
+
+<audio id="ringtone" src="{% static 'sounds/ringtone.mp3' %}" preload="auto"></audio>
+
+<script>
+  // Lecture du son de notification au premier clic (pour contourner les blocages navigateur)
+  document.addEventListener("click", () => {
+    const son = document.getElementById("ringtone");
+    if (son) son.play().then(() => son.pause()).catch(() => {});
+  }, { once: true });
+
+  let sonnerieTimeout = null;
+  const son = document.getElementById("ringtone");
+
+  function jouerSonnerieNotification() {
+    if (!son) return;
+    son.currentTime = 0;
+    son.play().catch(e => console.warn("Son bloqué :", e));
+    if (sonnerieTimeout) clearTimeout(sonnerieTimeout);
+    sonnerieTimeout = setTimeout(() => {
+      son.pause();
+    }, 10000);
+  }
+
+  function arreterSonnerie() {
+    if (son) son.pause();
+    if (sonnerieTimeout) clearTimeout(sonnerieTimeout);
+  }
+
+  // Choix du protocole WS/WSS selon HTTPS ou HTTP
+  const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+
+  // WebSocket Notifications - Connexion globale à toutes les pages
+  const notifSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/notifications/`);
+
+  notifSocket.onopen = function () {
+    console.log("WebSocket Notifications connecté.");
+  };
+
+  notifSocket.onmessage = function (e) {
+    const data = JSON.parse(e.data);
+    console.log("📥 Notification reçue :", data);
+
+    if (data.type === "new_message_notification") {
+      mettreAJourBadgeSolola(null);
+      jouerSonnerieNotification();
+
+      fetch(`/ajax/nom_utilisateur/${data.from_id}/`)
+        .then(res => res.json())
+        .then(info => {
+          afficherToast(info.nom, info.last_message || "");
+          envoyerNotificationDesktop("💬 Nouveau message", `De ${info.nom}`);
+        });
+    }
+
+    if (data.type === "remove_message_notification") {
+      mettreAJourBadgeSolola(null);
+      arreterSonnerie();
+    }
+  };
+
+  notifSocket.onerror = function (e) {
+    console.error("Erreur WebSocket Notifications :", e);
+  };
+
+  notifSocket.onclose = function () {
+    console.warn("WebSocket Notifications fermé.");
+  };
+
+  // Vérification périodique des messages non lus (fallback)
+  function verifierMessagesNonLus() {
+    fetch("{% url 'verifier_messages' %}")
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "jouer_sonnerie") {
+          const son = document.getElementById("ringtone");
+          if (son) son.play().catch(() => {});
+        }
+      });
+  }
+
+  // Mise à jour du badge de notification de messages
+  function mettreAJourBadgeSolola(nb = null) {
+    const badge = document.getElementById("sololaBadge");
+    const count = document.getElementById("sololaCount");
+    if (!badge || !count) return;
+
+    if (nb !== null) {
+      if (nb > 0) {
+        badge.classList.remove("d-none");
+        badge.classList.add("clignote");
+        count.textContent = nb;
+      } else {
+        badge.classList.add("d-none");
+        badge.classList.remove("clignote");
+        count.textContent = "0";
+      }
+    } else {
+      fetch("{% url 'nb_messages_non_lus' %}")
+        .then(res => res.json())
+        .then(data => {
+          if (data.nb > 0) {
+            badge.classList.remove("d-none");
+            badge.classList.add("clignote");
+            count.textContent = data.nb;
+          } else {
+            badge.classList.add("d-none");
+            badge.classList.remove("clignote");
+            count.textContent = "0";
+          }
+        });
+    }
+  }
+
+  // Intervalles de vérification régulière
+  setInterval(verifierMessagesNonLus, 30000);
+  setInterval(() => mettreAJourBadgeSolola(null), 15000);
+
+  // -----------------------------------------------------------
+  // Partie chat (uniquement si sur page chat)
+
+  const messageForm = document.getElementById("messageForm");
+  const chatBox = document.getElementById("chatBox");
+
+  {% if user_cible %}
+  const expediteurId = Number("{{ utilisateur_connecte.id }}");
+  const destinataireId = Number("{{ user_cible.id }}");
+  const expediteurNom = "{{ utilisateur_connecte.nom }}";
+
+  const roomName = `${Math.min(expediteurId, destinataireId)}_${Math.max(expediteurId, destinataireId)}`;
+  const chatSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/chat/${roomName}/`);
+
+  chatSocket.onopen = function () {
+    console.log("📡 WebSocket Chat connecté.");
+    chatSocket.send(JSON.stringify({
+      type: "messages_read",
+      expediteur_id: destinataireId,
+      destinataire_id: expediteurId
+    }));
+    arreterSonnerie();
+  };
+
+  chatSocket.onclose = function () {
+    console.warn("WebSocket Chat fermé.");
+  };
+
+  chatSocket.onerror = function (e) {
+    console.error("Erreur WebSocket Chat :", e);
+  };
+
+  chatSocket.onmessage = function (e) {
+    const data = JSON.parse(e.data);
+    console.log("📩 Message WebSocket reçu :", data);
+
+    if (!chatBox) return;
+
+    // Gestion appel vocal entrant
+    if (data.type === "call_incoming") {
+      const callModal = document.getElementById("callModal");
+      const callUserName = document.getElementById("callUserName");
+      const ringtone = document.getElementById("ringtone");
+      if (callUserName && callModal && ringtone) {
+        callUserName.innerText = data.from_name;
+        callModal.style.display = "flex";
+        ringtone.currentTime = 0;
+        ringtone.play();
+      }
+      return;
+    }
+
+    if (data.type === "call_answered") {
+      const ringtone = document.getElementById("ringtone");
+      const callModal = document.getElementById("callModal");
+      const endCallBtn = document.getElementById("endCall");
+      const rejectCallBtn = document.getElementById("rejectCall");
+      const acceptCallBtn = document.getElementById("acceptCall");
+
+      if (ringtone) ringtone.pause();
+
+      if (data.answer === "accept") {
+        if (endCallBtn) endCallBtn.classList.remove("d-none");
+        if (rejectCallBtn) rejectCallBtn.classList.add("d-none");
+        if (acceptCallBtn) acceptCallBtn.classList.add("d-none");
+      } else {
+        if (callModal) callModal.style.display = "none";
+        alert("L'utilisateur a rejeté l'appel.");
+      }
+      return;
+    }
+
+    if (data.type === "call_ended") {
+      const ringtone = document.getElementById("ringtone");
+      const callModal = document.getElementById("callModal");
+      if (ringtone) ringtone.pause();
+      if (callModal) callModal.style.display = "none";
+      alert("L'appel a été terminé.");
+      return;
+    }
+
+    // Affichage message texte/fichier
+    const div = document.createElement("div");
+    div.className = "message " + (data.expediteur_id == expediteurId ? "envoye" : "recu");
+
+    let contenu = "";
+    if (data.message) contenu += `<p>${data.message}</p>`;
+    if (data.file_url) {
+      const ext = data.file_ext.toLowerCase();
+      if (["jpg", "jpeg", "png", "gif"].includes(ext)) {
+        contenu += `<img src="${data.file_url}" style="max-width:100%; max-height:300px;"><br>`;
+      } else if (["mp4", "webm"].includes(ext)) {
+        contenu += `<video controls style="width:100%;"><source src="${data.file_url}"></video><br>`;
+      } else if (["mp3", "wav", "webm"].includes(ext)) {
+        contenu += `<audio controls style="width:100%;"><source src="${data.file_url}"></audio><br>`;
+      } else if (["pdf"].includes(ext)) {
+        contenu += `<iframe src="https://docs.google.com/gview?url=${data.file_url}&embedded=true" style="width:100%; height:400px;" frameborder="0"></iframe><br>`;
+      } else if (["doc", "docx", "xls", "xlsx", "ppt", "pptx"].includes(ext)) {
+        contenu += `<iframe src="https://view.officeapps.live.com/op/embed.aspx?src=${data.file_url}" style="width:100%; height:400px;" frameborder="0"></iframe><br>`;
+      } else {
+        contenu += `<a href="${data.file_url}" target="_blank" class="btn btn-outline-secondary">📁 Voir le fichier</a><br>`;
+      }
+      contenu += `<a href="${data.file_url}" download class="btn btn-sm btn-outline-primary mt-1">📥 Télécharger</a>`;
+    }
+
+    contenu += `<small>${data.expediteur_id == expediteurId ? "Moi" : data.expediteur} • Maintenant</small>`;
+    div.innerHTML = contenu;
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  };
+
+  // Envoi message texte
+  if (messageForm) {
+    const inputText = messageForm.elements.contenu;
+    messageForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const message = inputText.value.trim();
+      if (!message) return;
+
+      chatSocket.send(JSON.stringify({
+        message: message,
+        expediteur_id: expediteurId,
+        expediteur_nom: expediteurNom,
+        destinataire_id: destinataireId
+      }));
+
+      inputText.value = "";
+    });
+  }
+
+  // Envoi fichiers
+  const fileInput = document.getElementById("fileInput");
+  if (fileInput) {
+    fileInput.addEventListener("change", function () {
+      if (fileInput.files.length === 0) return;
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+
+      const tempMsg = document.createElement("div");
+      tempMsg.className = "message envoyee uploading-message";
+      tempMsg.textContent = `Envoi de « ${file.name} » en cours...`;
+      chatBox.appendChild(tempMsg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      reader.onload = function () {
+        chatSocket.send(JSON.stringify({
+          file: reader.result,
+          file_name: file.name,
+          expediteur_id: expediteurId,
+          expediteur_nom: expediteurNom,
+          destinataire_id: destinataireId
+        }));
+        fileInput.value = "";
+        setTimeout(() => tempMsg.remove(), 1500);
+      };
+
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Enregistrement vocal
+  let mediaRecorder;
+  let recordedChunks = [];
+
+  const recordBtn = document.getElementById("recordBtn");
+  const recordingStatus = document.getElementById("recordingStatus");
+
+  if (recordBtn) {
+    recordBtn.addEventListener("click", async () => {
+      if (!mediaRecorder || mediaRecorder.state === "inactive") {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          mediaRecorder = new MediaRecorder(stream);
+          recordedChunks = [];
+
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) recordedChunks.push(e.data);
+          };
+
+          mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunks, { type: "audio/webm" });
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              chatSocket.send(JSON.stringify({
+                file: reader.result,
+                file_name: `voice_${Date.now()}.webm`,
+                expediteur_id: expediteurId,
+                expediteur_nom: expediteurNom,
+                destinataire_id: destinataireId
+              }));
+            };
+            reader.readAsDataURL(blob);
+          };
+
+          mediaRecorder.start();
+          if(recordingStatus) recordingStatus.style.display = "inline";
+          recordBtn.innerHTML = `<i class="fas fa-stop"></i>`;
+
+          setTimeout(() => {
+            if (mediaRecorder.state === "recording") {
+              mediaRecorder.stop();
+              if(recordingStatus) recordingStatus.style.display = "none";
+              recordBtn.innerHTML = `<i class="fas fa-microphone"></i>`;
+            }
+          }, 20000);
+        } catch (err) {
+          alert("⚠️ Impossible d'accéder au microphone : " + err.message);
+        }
+      } else if (mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+        if(recordingStatus) recordingStatus.style.display = "none";
+        recordBtn.innerHTML = `<i class="fas fa-microphone"></i>`;
+      }
+    });
+  }
+
+  // Gestion appels vocaux
+  const callBtn = document.getElementById("callBtn");
+  const callModal = document.getElementById("callModal");
+  const ringtone = document.getElementById("ringtone");
+  const callUserName = document.getElementById("callUserName");
+  const acceptCallBtn = document.getElementById("acceptCall");
+  const rejectCallBtn = document.getElementById("rejectCall");
+  const endCallBtn = document.getElementById("endCall");
+
+  if (callBtn) {
+    callBtn.addEventListener("click", () => {
+      alert("⏳ Cette fonctionnalité d'appel vocal sera bientôt disponible. Merci de votre patience !");
+      return;
+      // Code appel vocal à activer plus tard
+      chatSocket.send(JSON.stringify({
+        type: "call_start",
+        expediteur_id: expediteurId,
+        destinataire_id: destinataireId,
+        from_name: expediteurNom
+      }));
+      callUserName.textContent = `avec ${document.querySelector('.user-name').textContent}`;
+      callModal.style.display = "flex";
+      if(ringtone) ringtone.play();
+    });
+  }
+
+  if (acceptCallBtn) {
+    acceptCallBtn.addEventListener("click", () => {
+      chatSocket.send(JSON.stringify({
+        type: "call_answer",
+        answer: "accept",
+        from_id: expediteurId
+      }));
+      if(ringtone) ringtone.pause();
+      if(endCallBtn) endCallBtn.classList.remove("d-none");
+      if(rejectCallBtn) rejectCallBtn.classList.add("d-none");
+      if(acceptCallBtn) acceptCallBtn.classList.add("d-none");
+    });
+  }
+
+  if (rejectCallBtn) {
+    rejectCallBtn.addEventListener("click", () => {
+      chatSocket.send(JSON.stringify({
+        type: "call_answer",
+        answer: "reject",
+        from_id: expediteurId
+      }));
+      if(ringtone) ringtone.pause();
+      if(callModal) callModal.style.display = "none";
+    });
+  }
+
+  if (endCallBtn) {
+    endCallBtn.addEventListener("click", () => {
+      chatSocket.send(JSON.stringify({
+        type: "call_end",
+        from_id: expediteurId
+      }));
+      if(callModal) callModal.style.display = "none";
+      if(ringtone) ringtone.pause();
+    });
+  }
+
+  // Emoji panel
+  const emojiBtn = document.getElementById("emojiBtn");
+  const emojiPanel = document.getElementById("emojiPanel");
+  const inputMsg = document.querySelector("input[name='contenu']");
+
+  if (emojiBtn && emojiPanel && inputMsg) {
+    emojiBtn.addEventListener("click", () => {
+      if (emojiPanel.style.display === "block") {
+        emojiPanel.style.display = "none";
+        return;
+      }
+
+      emojiPanel.style.visibility = "hidden";
+      emojiPanel.style.display = "block";
+
+      const rect = emojiBtn.getBoundingClientRect();
+      const scrollY = window.scrollY;
+      const scrollX = window.scrollX;
+
+      emojiPanel.style.left = `${rect.left + scrollX}px`;
+      emojiPanel.style.top = `${rect.top + scrollY - emojiPanel.offsetHeight - 8}px`;
+
+      emojiPanel.style.visibility = "visible";
+    });
+
+    // Liste des emojis
+    const emojis = ["😀", "😂", "😍", "😘", "😎", "😢", "🤔", "🙌", "🔥", "🎉", "💯", "❤️", "🤩", "😡", "😇", "😜", "🤗", "💖", "💔", "😱", "👏", "👍", "👎", "🙏",
+      "😁", "😅", "🤣", "🙂", "🙃", "😉", "🥰", "🤩", "😗", "☺️", "😚", "😋", "😜", "🤪", "🤑", "🤗", "🤭", "🤫",
+      "🤔", "🤐", "🤨", "😐", "😑", "😶", "😏", "😒", "🙄", "😬", "🤥", "😌", "😔", "😪", "🤤", "😴", "😷", "🤒", "🤕", "🤢",
+      "🤮", "🥵", "🥶", "😵", "🤯", "🤠", "🥳", "😎", "🤓", "🧐", "😕", "😟", "🙁", "☹️", "😮", "😯", "😲", "😳", "🥺", "😦",
+      "😧", "😨", "😰", "😥", "😢", "😭", "😱", "😖", "😣", "😞", "😓", "😩", "😫", "🥱", "😤", "😠", "🤬", "😈", "👿", "💀",
+      "☠️", "💩", "🤡", "👹", "👺", "👻", "👽", "👾", "🤖", "🎃", "😺", "😹", "😻", "😼", "🙀", "😿", "😾",
+      "💕", "💖", "💗", "💓", "💞", "💋", "🎉", "🎊", "🎮", "🎬", "🎭", "🎵", "🎤", "🎧", "🎼", "🎹", "🥁", "🎷", "🎺", "🎸"];
+
+    emojis.forEach(emoji => {
+      const span = document.createElement("span");
+      span.textContent = emoji;
+      span.style.cursor = "pointer";
+      span.style.fontSize = "20px";
+      span.style.margin = "4px";
+      span.addEventListener("click", () => {
+        inputMsg.value += emoji;
+        emojiPanel.style.display = "none";
+        inputMsg.focus();
+      });
+      emojiPanel.appendChild(span);
+    });
+  }
+
+  // Toast notifications (Bootstrap 5)
+  function afficherToast(titre, message) {
+    if (!("bootstrap" in window)) return;
+
+    const toastContainerId = "toastContainerGlobal";
+    let toastContainer = document.getElementById(toastContainerId);
+    if (!toastContainer) {
+      toastContainer = document.createElement("div");
+      toastContainer.id = toastContainerId;
+      toastContainer.style.position = "fixed";
+      toastContainer.style.top = "20px";
+      toastContainer.style.right = "20px";
+      toastContainer.style.zIndex = "1060";
+      document.body.appendChild(toastContainer);
+    }
+
+    const toastEl = document.createElement("div");
+    toastEl.className = "toast align-items-center text-white bg-primary border-0";
+    toastEl.setAttribute("role", "alert");
+    toastEl.setAttribute("aria-live", "assertive");
+    toastEl.setAttribute("aria-atomic", "true");
+    toastEl.style.minWidth = "250px";
+
+    toastEl.innerHTML = `
+      <div class="d-flex">
+        <div class="toast-body">
+          <strong>${titre}</strong><br>${message}
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fermer"></button>
+      </div>
+    `;
+
+    toastContainer.appendChild(toastEl);
+
+    const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
+    toast.show();
+
+    toastEl.addEventListener("hidden.bs.toast", () => {
+      toastEl.remove();
+    });
+  }
+
+  // Notifications desktop (permission requise)
+  function envoyerNotificationDesktop(titre, message) {
+    if (!("Notification" in window)) return;
+
+    if (Notification.permission === "granted") {
+      new Notification(titre, { body: message, icon: "/static/img/notification_icon.png" });
+    } else if (Notification.permission !== "denied") {
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          new Notification(titre, { body: message, icon: "/static/img/notification_icon.png" });
+        }
+      });
+    }
+  }
+{% endif %}
+</script>
+
+
 <script>
     function toggleBlogDetails(blogId) {
         const section = document.getElementById('blogDetails-' + blogId);
