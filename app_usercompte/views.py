@@ -85,7 +85,7 @@ def homes(request):
         utilisateur_connecte = Profil.objects.get(id=user_id)
     except Profil.DoesNotExist:
         request.session.flush()
-        return redirect("splash")
+        return redirect("homes")
 
     utilisateurs = Profil.objects.filter(status=1).exclude(id=user_id).order_by('-created_on')
     if search_query:

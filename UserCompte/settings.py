@@ -52,7 +52,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'app_usercompte.middleware.UpdateLastConnectionMiddleware',
     'app_usercompte.middleware.InvalidUserSessionMiddleware', 
-    'app_usercompte.middleware.InactiveUserMiddleware',
+    'app_usercompte.middleware.UpdateLastActivityMiddleware',
 ]
 
 ROOT_URLCONF = 'UserCompte.urls'
