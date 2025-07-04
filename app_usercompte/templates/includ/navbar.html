@@ -76,7 +76,8 @@
             href="{{ notice_url }}">
             <i class="bi bi-bell me-1"></i> Notice
             <span id="badge-notice-count"
-              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger mt-2" {% if total_notices==0 %}style="display: none;" {% endif %}>
+              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger mt-2"
+              {% if total_notices == 0 %}style="display: none;"{% endif %}>
               {{ total_notices }}
             </span>
           </a>
