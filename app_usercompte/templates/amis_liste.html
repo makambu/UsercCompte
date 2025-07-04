@@ -22,7 +22,7 @@
     </div>
     <div>
       <!-- Bouton Accepter invitation -->
-      <button onclick="gererInvitation({{ inv.id }}, 'accepter')" class="btn btn-success btn-sm me-1" data-bs-toggle="tooltip"
+      <button onclick="gererInvitation({{ inv.id }}, 'accepter')" class="btn btn-success btn-sm me-1 mb-1" data-bs-toggle="tooltip"
         data-bs-placement="top" title="Accepter l'invitation">
         <i class="bi bi-check-lg"></i>
       </button>
@@ -78,7 +78,7 @@
       </div>
       <div>
         <!-- Bouton Profil -->
-          <a href="{% url 'voir_profil' ami.id %}" class="btn btn-outline-secondary btn-sm me-1" data-bs-toggle="tooltip"
+          <a href="{% url 'voir_profil' ami.id %}" class="btn btn-outline-secondary btn-sm me-1 mb-1" data-bs-toggle="tooltip"
             data-bs-placement="top" title="Voir le profil">
             <i class="bi bi-person-circle"></i>
           </a>

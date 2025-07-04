@@ -486,39 +486,41 @@
 
 
 <script>
-(() => {
-  const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 minutes en ms
-  let inactivityTimer;
+let isNavigating = false;
 
-  // Remise à zéro du timer
-  function resetTimer() {
-    clearTimeout(inactivityTimer);
-    inactivityTimer = setTimeout(logoutDueToInactivity, INACTIVITY_LIMIT);
+document.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => { isNavigating = true; });
+});
+document.querySelectorAll('form').forEach(form => {
+    form.addEventListener('submit', () => { isNavigating = true; });
+});
+
+const LOGOUT_URL = "{% url 'logout_ajax' %}";
+const CSRF_TOKEN = '{{ csrf_token }}';
+
+function logoutUser() {
+    if (navigator.sendBeacon) {
+        const blob = new Blob([], { type: 'application/x-www-form-urlencoded' });
+        navigator.sendBeacon(LOGOUT_URL, blob);
+    } else {
+        fetch(LOGOUT_URL, {
+            method: "POST",
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': CSRF_TOKEN,
+            },
+            keepalive: true
+        });
+    }
+}
+
+window.addEventListener('beforeunload', () => {
+  if (!isNavigating) {
+    logoutUser();
   }
-
-  // Appel pour déconnexion et redirection
-  function logoutDueToInactivity() {
-    fetch("{% url 'logout_ajax' %}", {
-      method: "POST",
-      headers: {
-        'X-CSRFToken': '{{ csrf_token }}',
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      keepalive: true
-    }).finally(() => {
-      alert("Vous avez été déconnecté(e) pour inactivité sur app-cgm. Veuillez se connectez à nouveau");
-      window.location.href = "{% url 'login_user' %}";
-    });
-  }
-
-  // Événements qui comptent comme activité
-  ['click', 'mousemove', 'keydown', 'scroll', 'touchstart'].forEach(event => {
-    document.addEventListener(event, resetTimer, true);
-  });
-
-  resetTimer(); // démarre le timer au chargement
-})();
+});
 </script>
+
 
 
 <script>

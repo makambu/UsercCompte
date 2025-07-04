@@ -1343,9 +1343,10 @@ def ajouter_story_ajax(request):
                 video_url = data.get("video_url")
 
                 if video_url:
-                    Story.objects.create(
+                    # Crée un objet CloudinaryResource à partir de l'URL
+                    story = Story.objects.create(
                         auteur=utilisateur,
-                        video=video_url,
+                        video=CloudinaryResource(video_url),
                         expire_le=timezone.now() + timedelta(hours=24)
                     )
                     return JsonResponse({"status": "success", "message": "Story vidéo enregistrée."})
