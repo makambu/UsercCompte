@@ -1,0 +1,57 @@
+{% load static %}
+
+<!-- Toast pour notifications (en haut au milieu) -->
+<div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 1055; top: 70px;">
+  <div id="notifToast" class="toast align-items-center text-bg-primary border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="toastMessage">Message toast</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fermer"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Son de notification -->
+<audio id="notifSound" src="{% static 'sons/notif_ami.mp3' %}" preload="auto"></audio>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  function showToast(message, type = 'primary') {
+    const toastEl = document.getElementById('notifToast');
+    const toastMsg = document.getElementById('toastMessage');
+    if (!toastEl || !toastMsg) return;
+    toastMsg.textContent = message;
+    toastEl.className = `toast align-items-center text-bg-${type} border-0 shadow`;
+    const toast = new bootstrap.Toast(toastEl);
+    toast.show();
+  }
+
+  function playNotifSound() {
+    const sound = document.getElementById("notifSound");
+    if (sound) {
+      sound.pause();
+      sound.currentTime = 0;
+      sound.play().catch((e) => {
+        console.warn("Son non autorisé par le navigateur : ", e);
+      });
+    }
+  }
+
+  // WebSocket global notifications
+  const notifSocket = new WebSocket(
+    (window.location.protocol === "https:" ? "wss" : "ws") + '://' + window.location.host + '/ws/notifications/'
+  );
+
+  notifSocket.onmessage = function (e) {
+    const data = JSON.parse(e.data);
+
+    if (data.type === "invitation_ami") {
+      showToast(`📨 Nouvelle invitation de ${data.invitation.emetteur.nom}`);
+      playNotifSound();
+    } else if (data.type === "like" || data.type === "commentaire") {
+      showToast(`💬 Nouvelle interaction : ${data.message}`, 'info');
+      playNotifSound();
+    }
+  };
+});
+</script>
