@@ -741,48 +741,49 @@ function envoyerStoryDirect(input) {
   const formData = new FormData();
   const isVideo = fichier.type.startsWith("video");
 
-if (isVideo) {
-  formData.append("file", fichier);
-  formData.append("upload_preset", "story_direct_upload");
+  if (isVideo) {
+    formData.append("file", fichier);
+    formData.append("upload_preset", "story_direct_upload");
 
-  fetch("https://api.cloudinary.com/v1_1/dml7j5pjj/video/upload", {
-    method: "POST",
-    body: formData
-  })
-    .then(res => re.s.json())
-    .then(data => {
-      const videoUrl = data.secure_url.replace(/\/upload\//, "/upload/f_mp4/");
+    fetch("https://api.cloudinary.com/v1_1/dml7j5pjj/video/upload", {
+      method: "POST",
+      body: formData
     })
+      .then(res => res.json())
+      .then(data => {
+        const videoUrl = data.secure_url
+          ? data.secure_url.replace(/\/upload\//, "/upload/f_mp4/")
+          : null;
 
-      if (!videoUrl) {
-        alert("Erreur : Cloudinary n’a pas renvoyé l’URL.");
-        return;
-      }
+        if (!videoUrl) {
+          alert("Erreur : Cloudinary n’a pas renvoyé l’URL.");
+          return;
+        }
 
-      return fetch("{% url 'ajax_ajouter_story' %}", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": getCSRFToken()
-        },
-        body: JSON.stringify({ video_url: videoUrl })
+        return fetch("{% url 'ajax_ajouter_story' %}", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCSRFToken()
+          },
+          body: JSON.stringify({ video_url: videoUrl })
+        });
+      })
+      .then(res => res?.json())
+      .then(data => {
+        if (data?.status === "success") {
+          alert("Vidéo story ajoutée !");
+          location.reload();
+        } else {
+          alert(data?.message || "Erreur lors de l'ajout.");
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Erreur lors de l'envoi vers Cloudinary.");
       });
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.status === "success") {
-        alert("Vidéo story ajoutée !");
-        location.reload();
-      } else {
-        alert(data.message || "Erreur lors de l'ajout.");
-      }
-    })
-    .catch(err => {
-      console.error(err);
-      alert("Erreur lors de l'envoi vers Cloudinary.");
-    });
-} else {
-    // Sinon, image → backend classique
+  } else {
+    // Image → envoi direct avec FormData
     formData.append("image", fichier);
 
     fetch("{% url 'ajax_ajouter_story' %}", {
@@ -803,9 +804,8 @@ if (isVideo) {
       });
   }
 
-  input.value = ""; // Reset
+  input.value = ""; // Reset input
 }
-
 
 function getCSRFToken() {
   const name = 'csrftoken';
@@ -841,9 +841,6 @@ function supprimerStory() {
       }
     });
 }
-
-
-
 </script>
 
 
