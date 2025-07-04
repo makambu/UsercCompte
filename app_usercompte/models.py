@@ -252,6 +252,18 @@ class Story(models.Model):
         elif self.image:
             return "image"
         return "unknown"
+    
+    def get_mime_type(self):
+        if self.video:
+            url = self.video.url
+            if url.endswith(".mp4"):
+                return "video/mp4"
+            elif url.endswith(".webm"):
+                return "video/webm"
+            elif url.endswith(".mov"):
+                return "video/quicktime"
+        return "video/mp4"
+
 
 
 

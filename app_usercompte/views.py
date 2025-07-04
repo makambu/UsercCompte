@@ -1242,6 +1242,15 @@ def ajouter_story(request):
     })
 
 
+def get_mime_type(url):
+    if url.endswith(".mp4"):
+        return "video/mp4"
+    elif url.endswith(".webm"):
+        return "video/webm"
+    elif url.endswith(".mov"):
+        return "video/quicktime"
+    return "video/mp4"
+
 def stories_utilisateur(request, user_id):
     now = timezone.now()
 
@@ -1258,10 +1267,12 @@ def stories_utilisateur(request, user_id):
 
     story_data = []
     for story in stories:
+        url = story.get_media_url()
         story_data.append({
             "id": story.id,
             "type": story.get_type(),
-            "media_url": story.get_media_url(),
+            "media_url": url,
+            "mime_type": get_mime_type(url),
             "description": getattr(story, "description", ""),
             "date": story.date_creation.strftime("%d/%m/%Y %H:%M"),
             "likes": story.likes.count(),
@@ -1277,6 +1288,20 @@ def stories_utilisateur(request, user_id):
         "image_profil": image_profil,
         "est_proprietaire": user_connecte_id == auteur.id
     })
+
+@csrf_exempt
+def supprimer_story(request, story_id):
+    user_id = request.session.get("user_id")
+    if not user_id or request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Non autorisé"}, status=403)
+
+    story = get_object_or_404(Story, id=story_id)
+    if story.auteur.id != user_id:
+        return JsonResponse({"status": "error", "message": "Permission refusée"}, status=403)
+
+    story.delete()
+    return JsonResponse({"status": "success"})
+
 
 @csrf_exempt
 def like_story(request, story_id):

@@ -450,6 +450,13 @@
             <i id="pauseIcon" class="fas fa-pause"></i>
           </button>
         </div>
+        {% comment %} Bouton de suppression story si propriétaire {% endcomment %}
+        <div class="position-absolute bottom-0 start-50 translate-middle-x mb-3" id="deleteStoryContainer"
+          style="display: none;">
+          <button onclick="supprimerStory()" class="btn btn-outline-danger btn-sm rounded-pill px-3">
+            <i class="fas fa-trash-alt me-1"></i> Supprimer
+          </button>
+        </div>
 
         <div class="position-absolute bottom-0 end-0 m-3 d-flex align-items-center gap-2" id="likeStorySection">
           <!-- Injecté via JS -->
@@ -575,10 +582,13 @@ function showStory() {
   if (story.type === "image") {
     content = `<img src="${story.media_url}" class="w-100" style="max-height:500px; object-fit:contain;">`;
   } else if (story.type === "video") {
-    content = `<video id="storyVideo" class="w-100" style="max-height:500px;" autoplay muted  controls>
-                 <source src="${story.media_url}" type="video/mp4">
+    content = `<video id="storyVideo" class="w-100" style="max-height:500px;" autoplay muted controls playsinline>
+                 <source src="${story.media_url}" type="${story.mime_type || 'video/mp4'}">
+                 Votre navigateur ne prend pas en charge la vidéo.
                </video>`;
   }
+
+  console.log("Chargement story :", story.media_url, "MIME:", story.mime_type);
 
   contentContainer.innerHTML = `
     ${content}
@@ -586,14 +596,14 @@ function showStory() {
     <small class="text-muted">${story.date}</small>
   `;
 
-  // Ajouter l’ID à la liste des vues
+  // Marquer comme vue
   storiesVues.add(story.id);
 
-  // Couleur de la barre selon vue
+  // Barre de progression
   progressBar.className = `progress-bar ${storiesVues.has(story.id) ? 'bg-primary' : 'bg-white'}`;
   progressBar.style.width = "0%";
 
-  // Zone de like
+  // Like section
   const likeSection = document.getElementById("likeStorySection");
   if (estProprietaireStory) {
     likeSection.innerHTML = `
@@ -608,7 +618,15 @@ function showStory() {
     `;
   }
 
-  // Progression
+  const deleteBtn = document.getElementById("deleteStoryContainer");
+  if (estProprietaireStory) {
+    deleteBtn.style.display = "block";
+  } else {
+    deleteBtn.style.display = "none";
+  }
+
+
+  // Démarrer la progression
   progress = 0;
   clearInterval(interval);
 
@@ -676,7 +694,7 @@ function toggleLikeStory() {
     });
 }
 
-// 👥 Afficher les utilisateurs ayant aimé
+// Afficher les utilisateurs ayant aimé
 function afficherLikesStory() {
   paused = true; // Met en pause
   document.getElementById("pauseIcon").className = "fas fa-play";
@@ -728,6 +746,7 @@ function envoyerStoryDirect(input) {
     formData.append("file", fichier);
     formData.append("upload_preset", "story_direct_upload"); // Ton preset unsigned
     formData.append("resource_type", "video");
+    formData.append("format", "mp4"); //
 
     fetch("https://api.cloudinary.com/v1_1/dml7j5pjj/video/upload", {
       method: "POST",
@@ -796,6 +815,32 @@ function getCSRFToken() {
   }
   return '';
 }
+
+function supprimerStory() {
+  const story = storyList[storyIndex];
+  if (!confirm("Voulez-vous vraiment supprimer cette story ?")) return;
+
+  fetch(`/ajax/story/${story.id}/delete/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': getCSRFToken(),
+    },
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === "success") {
+        alert("Story supprimée !");
+        storyList.splice(storyIndex, 1);
+        storyIndex = Math.max(0, storyIndex - 1);
+        showStory();
+      } else {
+        alert(data.message || "Erreur lors de la suppression.");
+      }
+    });
+}
+
+
+
 </script>
 
 
