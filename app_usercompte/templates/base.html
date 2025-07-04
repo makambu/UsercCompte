@@ -523,7 +523,7 @@ function logoutUser() {
 }
 
 // ⏱️ ALERTE d'expiration de session après 25 minutes d'inactivité
-const AlerteAvantExpiration = 25 * 60 * 1000; // 25 minutes
+const AlerteAvantExpiration = 40 * 60 * 1000; // 25 minutes
 let alerteTimeout = setTimeout(() => {
     if (confirm("⏳ Votre session va expirer dans 5 minutes.\nSouhaitez-vous rester connecté ?")) {
         // Ping pour prolonger la session côté serveur
