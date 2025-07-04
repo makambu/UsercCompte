@@ -243,7 +243,7 @@ class Story(models.Model):
         if self.image:
             return self.image.url
         elif self.video:
-            return self.video.url
+            return self.video.url if hasattr(self.video, 'url') else str(self.video)
         return ""
 
     def get_type(self):

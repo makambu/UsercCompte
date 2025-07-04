@@ -1279,6 +1279,9 @@ def stories_utilisateur(request, user_id):
             "is_liked": user_connecte in story.likes.all() if user_connecte else False
         })
 
+    import pprint
+    pprint.pprint(story_data)
+
     auteur = get_object_or_404(Profil, id=user_id)
     image_profil = auteur.image_profil.url if auteur.image_profil else static("images/image_4.png")
 
