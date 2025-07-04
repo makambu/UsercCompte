@@ -5,6 +5,19 @@
 
 {% include 'includ/notification_global.html' %}
 
+<!-- Toast pour notifications -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
+  <div id="notifToast" class="toast align-items-center text-bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="toastMessage">Message toast</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fermer"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Son de notification -->
+<audio id="notifSound" src="{% static 'sons/notif_ami.mp3' %}" preload="auto"></audio>
+
 <!-- Carousel de bienvenue -->
 <div class="carousel-inner mt-4">
   <div class="carousel-item active position-relative">
@@ -22,7 +35,7 @@
       <a href="{% url 'homes' %}" class="me-3 text-decoration-none text-blue fs-4" title="Retour à l'accueil">
         <i class="fas fa-chevron-left"></i>
       </a>
-      <h4 class="mb-0 fw-bold">🛗️ Vos notifications</h4>
+      <h4 class="mb-0 fw-bold">🛎️ Vos notifications</h4>
     </div>
     <hr style="border-color: rgb(121, 119, 119);">
   </div>
@@ -36,26 +49,22 @@
                 {% if ami.image_profil %}
                 <img src="{{ ami.image_profil.url }}" class="rounded-circle me-2" width="40" height="40" style="object-fit: fill;">
                 {% else %}
-                <img src="{% static 'images/image_4.png' %}" class="rounded-circle me-2" width="40" height="40"
-                    style="object-fit: fill;">
+                <img src="{% static 'images/image_4.png' %}" class="rounded-circle me-2" width="40" height="40" style="object-fit: fill;">
                 {% endif %}
             </a>
             <div class="flex-grow-1">
                 <p class="mb-1">
-                    <strong><a href="{% url 'voir_profil' inv.emetteur.id %}">{{ inv.emetteur.nom }}</a></strong> vous a
-                    envoyé une invitation d’amitié.
+                    <strong><a href="{% url 'voir_profil' inv.emetteur.id %}">{{ inv.emetteur.nom }}</a></strong> vous a envoyé une invitation d’amitié.
                 </p>
                 <small class="text-muted">{{ inv.date_envoi|date:"d/m/Y H:i" }}</small>
             </div>
             <div>
-                <button onclick="gererInvitation({{ inv.id }}, 'accepter')"
-                    class="btn btn-success btn-sm me-1">Accepter</button>
+                <button onclick="gererInvitation({{ inv.id }}, 'accepter')" class="btn btn-success btn-sm me-1">Accepter</button>
                 <button onclick="gererInvitation({{ inv.id }}, 'refuser')" class="btn btn-danger btn-sm">Refuser</button>
             </div>
         </div>
     </div>
     {% endfor %}
-
 
     {% for n in notifications %}
     <div class="card shadow-sm mb-3" data-notif-id="{{ n.id }}">
@@ -85,7 +94,27 @@
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 
-  // Fonction globale pour accepter ou refuser une invitation
+  function showToast(message, type = 'primary') {
+    const toastEl = document.getElementById('notifToast');
+    const toastMsg = document.getElementById('toastMessage');
+    if (!toastEl || !toastMsg) return;
+    toastMsg.textContent = message;
+    toastEl.className = `toast align-items-center text-bg-${type} border-0`;
+    const toast = new bootstrap.Toast(toastEl);
+    toast.show();
+  }
+
+  function playNotifSound() {
+    const sound = document.getElementById("notifSound");
+    if (sound) {
+      sound.pause();
+      sound.currentTime = 0;
+      sound.play().catch((e) => {
+        console.warn("Son non autorisé par le navigateur : ", e);
+      });
+    }
+  }
+
   window.gererInvitation = function (id, action) {
     const url = action === 'accepter'
       ? `/invitation-accepter/${id}/`
@@ -103,14 +132,32 @@ document.addEventListener("DOMContentLoaded", function () {
       if (data.status === 'ok') {
         const div = document.getElementById(`invitation-${id}`);
         if (div) div.remove();
+        showToast(`✅ Invitation ${action} avec succès.`, 'success');
       } else {
-        alert("Erreur : " + data.message);
+        showToast("❌ Erreur : " + data.message, 'danger');
       }
     })
-    .catch(() => alert("Erreur réseau."));
+    .catch(() => showToast("❌ Erreur réseau.", 'danger'));
   };
 
-  // Fonction pour récupérer le token CSRF
+  // WebSocket setup
+  const notifSocket = new WebSocket(
+    (window.location.protocol === "https:" ? "wss" : "ws") + '://' + window.location.host + '/ws/notifications/'
+  );
+
+  notifSocket.onmessage = function (e) {
+    const data = JSON.parse(e.data);
+
+    if (data.type === "invitation_ami") {
+      showToast(`📨 Nouvelle invitation de ${data.invitation.emetteur.nom}`);
+      playNotifSound();
+    }
+    else if (data.type === "like" || data.type === "commentaire") {
+      showToast(`💬 Nouvelle interaction : ${data.message}`, 'info');
+      playNotifSound();
+    }
+  };
+
   function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -125,7 +172,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     return cookieValue;
   }
-
 });
 </script>
 
