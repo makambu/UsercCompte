@@ -86,16 +86,17 @@ def homes(request):
         utilisateur_connecte = Profil.objects.get(id=user_id)
     except Profil.DoesNotExist:
         request.session.flush()
-        return redirect('login_user')
+        return redirect("splash")
 
     # Vérification inactivité côté serveur (30 minutes)
-    if utilisateur_connecte.derniere_activité < timezone.now() - timedelta(minutes=30):
+    if utilisateur_connecte.derniere_activité < timezone.now() - timedelta(minutes=45):
         # Déconnexion forcée + statut hors ligne
         utilisateur_connecte.is_online = False
         utilisateur_connecte.save()
         request.session.flush()
         messages.warning(request, "Session expirée pour inactivité.")
-        return redirect("login_user")
+        return redirect("splash_view")
+
 
     # Mise à jour dernière activité à maintenant
     utilisateur_connecte.derniere_activité = timezone.now()
@@ -1448,6 +1449,20 @@ def nom_utilisateur(request, user_id):
         })
     except Profil.DoesNotExist:
         return JsonResponse({"nom": "Inconnu", "last_message": ""})
+
+@csrf_exempt
+def ping_user(request):
+    user_id = request.session.get("user_id")
+    if request.method == "POST" and user_id:
+        try:
+            profil = Profil.objects.get(id=user_id)
+            profil.derniere_activité = timezone.now()
+            profil.save()
+            return JsonResponse({"status": "ok", "message": "Session prolongée."})
+        except Profil.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Utilisateur introuvable."}, status=404)
+    return JsonResponse({"status": "error", "message": "Requête non autorisée."}, status=403)
+
 
 
 

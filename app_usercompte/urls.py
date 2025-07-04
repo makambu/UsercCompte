@@ -48,6 +48,7 @@ urlpatterns = [
     path("chatbot/historique/", views.charger_historique, name="chatbot_historique"),
     path("ajax/nom_utilisateur/<int:user_id>/", views.nom_utilisateur, name="nom_utilisateur"),
     path('ajax/story/<int:story_id>/delete/', views.supprimer_story, name='supprimer_story'),
+    path("ajax/ping/", views.ping_user, name="ping_user"),
 ]
 
 if settings.DEBUG:
