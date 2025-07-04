@@ -30,28 +30,28 @@
   {% if notifications %}
   <div id="notifications-list">
     {% for inv in invitations %}
-    <div class="card shadow-sm mb-3" data-notif-id="inv_{{ inv.id }}">
-      <div class="card-body d-flex align-items-center">
-        <a href="{% url 'voir_profil' inv.emetteur.id %}">
-          {% if inv.emetteur.image_profil %}
-          <img src="{{ inv.emetteur.image_profil.url }}" class="rounded-circle me-3" width="50" height="50">
-          {% else %}
-          <img src="{% static 'images/image_4.png' %}" class="rounded-circle me-3" width="50" height="50">
-          {% endif %}
-        </a>
-        <div class="flex-grow-1">
-          <p class="mb-1">
-            <strong><a href="{% url 'voir_profil' inv.emetteur.id %}">{{ inv.emetteur.nom }}</a></strong> vous a envoyé une invitation d’amitié.
-          </p>
-          <small class="text-muted">{{ inv.date_envoi|date:"d/m/Y H:i" }}</small>
+    <div class="card shadow-sm mb-3" id="invitation-{{ inv.id }}">
+        <div class="card-body d-flex align-items-center">
+            <a href="{% url 'voir_profil' inv.emetteur.id %}">
+                <img src="{{ inv.emetteur.image_profil.url if inv.emetteur.image_profil else static 'images/image_4.png' }}"
+                    class="rounded-circle me-3" width="50" height="50">
+            </a>
+            <div class="flex-grow-1">
+                <p class="mb-1">
+                    <strong><a href="{% url 'voir_profil' inv.emetteur.id %}">{{ inv.emetteur.nom }}</a></strong> vous a
+                    envoyé une invitation d’amitié.
+                </p>
+                <small class="text-muted">{{ inv.date_envoi|date:"d/m/Y H:i" }}</small>
+            </div>
+            <div>
+                <button onclick="gererInvitation({{ inv.id }}, 'accepter')"
+                    class="btn btn-success btn-sm me-1">Accepter</button>
+                <button onclick="gererInvitation({{ inv.id }}, 'refuser')" class="btn btn-danger btn-sm">Refuser</button>
+            </div>
         </div>
-        <div>
-          <button onclick="gererInvitation({{ inv.id }}, 'accepter')" class="btn btn-success btn-sm me-1">Accepter</button>
-          <button onclick="gererInvitation({{ inv.id }}, 'refuser')" class="btn btn-danger btn-sm">Refuser</button>
-        </div>
-      </div>
     </div>
     {% endfor %}
+
 
     {% for n in notifications %}
     <div class="card shadow-sm mb-3" data-notif-id="{{ n.id }}">
@@ -79,70 +79,41 @@
 </div>
 
 <script>
-  const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
-  const notifSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/notifications/`);
+document.addEventListener("DOMContentLoaded", function () {
 
-  notifSocket.onopen = () => console.log("WebSocket Notifications connecté.");
-
-  notifSocket.onmessage = (e) => {
-    const data = JSON.parse(e.data);
-    console.log("Notification WS reçue :", data);
-
-    if (data.type === "invitation_ami") {
-      ajouterNotificationInvitation(data.invitation);
-    } else if (data.type === "invitation_ami_update") {
-      mettreAJourNotificationInvitation(data.invitation_id, data.statut);
-    }
-  };
-
-  notifSocket.onerror = (e) => console.error("Erreur WebSocket Notifications :", e);
-  notifSocket.onclose = () => console.warn("WebSocket Notifications fermé.");
-
+  // Fonction globale pour accepter ou refuser une invitation
   window.gererInvitation = function (id, action) {
-    repondreInvitation(id, action === 'accepter');
-  }
-
-  function repondreInvitation(invitationId, accepter) {
-    const url = accepter ? `/invitation-accepter/${invitationId}/` : `/invitation-refuser/${invitationId}/`;
+    const url = action === 'accepter'
+      ? `/invitation-accepter/${id}/`
+      : `/invitation-refuser/${id}/`;
 
     fetch(url, {
       method: 'POST',
       headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'X-CSRFToken': getCookie('csrftoken')
+        'X-CSRFToken': getCookie('csrftoken'),
+        'X-Requested-With': 'XMLHttpRequest'
       }
     })
     .then(res => res.json())
     .then(data => {
       if (data.status === 'ok') {
-        mettreAJourNotificationInvitation(invitationId, accepter ? 'acceptee' : 'refusee');
+        const div = document.getElementById(`invitation-${id}`);
+        if (div) div.remove();
       } else {
-        alert("Erreur: " + (data.message || "Une erreur est survenue"));
+        alert("Erreur : " + data.message);
       }
     })
-    .catch(() => alert("Erreur réseau"));
-  }
+    .catch(() => alert("Erreur réseau."));
+  };
 
-  function mettreAJourNotificationInvitation(invitation_id, statut) {
-    const card = document.querySelector(`.card[data-notif-id="inv_${invitation_id}"]`);
-    if (!card) return;
-
-    const statusText = statut === "acceptee"
-      ? '<span class="badge bg-success">Invitation acceptée</span>'
-      : '<span class="badge bg-danger">Invitation refusée</span>';
-
-    card.querySelector('div.flex-grow-1 p').innerHTML += ` — ${statusText}`;
-    const btns = card.querySelectorAll('button');
-    btns.forEach(b => b.remove());
-  }
-
+  // Fonction pour récupérer le token CSRF
   function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
       const cookies = document.cookie.split(';');
       for (let c of cookies) {
         c = c.trim();
-        if (c.startsWith(name + '=')) {
+        if (c.substring(0, name.length + 1) === (name + '=')) {
           cookieValue = decodeURIComponent(c.substring(name.length + 1));
           break;
         }
@@ -150,6 +121,8 @@
     }
     return cookieValue;
   }
+
+});
 </script>
 
 {% endblock %}
