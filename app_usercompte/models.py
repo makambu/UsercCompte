@@ -228,10 +228,11 @@ def get_expiration_date():
     return timezone.now() + timedelta(hours=24)
 
 
+# Modèle corrigé
 class Story(models.Model):
     auteur = models.ForeignKey(Profil, on_delete=models.CASCADE)
     image = CloudinaryField('image', folder='stories/images/', null=True, blank=True)
-    video = CloudinaryField('video', folder='stories/videos/', resource_type='video', null=True, blank=True)
+    video = CloudinaryField('video', folder='stories/videos/', resource_type='video', null=True, blank=True)  # ← ne change pas ici
     likes = models.ManyToManyField(Profil, related_name='story_likes', blank=True)
     date_creation = models.DateTimeField(auto_now_add=True)
     expire_le = models.DateTimeField(default=get_expiration_date)
@@ -243,7 +244,7 @@ class Story(models.Model):
         if self.image:
             return self.image.url
         elif self.video:
-            return self.video.url if hasattr(self.video, 'url') else str(self.video)
+            return self.video.url  # OK si le champ est bien un CloudinaryField
         return ""
 
     def get_type(self):
@@ -252,18 +253,6 @@ class Story(models.Model):
         elif self.image:
             return "image"
         return "unknown"
-    
-    def get_mime_type(self):
-        if self.video:
-            url = self.video.url
-            if url.endswith(".mp4"):
-                return "video/mp4"
-            elif url.endswith(".webm"):
-                return "video/webm"
-            elif url.endswith(".mov"):
-                return "video/quicktime"
-        return "video/mp4"
-
 
 
 

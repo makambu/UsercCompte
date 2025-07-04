@@ -1271,8 +1271,9 @@ def stories_utilisateur(request, user_id):
         story_data.append({
             "id": story.id,
             "type": story.get_type(),
-            "media_url": story.get_media_url(),
-            "mime_type": get_mime_type(url),
+            "image": story.image.url if story.image else "",
+            "video": story.video.url if story.video else "",
+            "mime_type": get_mime_type(story.get_media_url()),
             "description": getattr(story, "description", ""),
             "date": story.date_creation.strftime("%d/%m/%Y %H:%M"),
             "likes": story.likes.count(),
@@ -1363,22 +1364,23 @@ def ajouter_story_ajax(request):
 
     if request.method == "POST":
         try:
-            # Si c’est un JSON → ajout vidéo Cloudinary
             if request.content_type == "application/json":
                 data = json.loads(request.body)
                 video_url = data.get("video_url")
 
                 if video_url:
+                    # Convertir l'URL Cloudinary en CloudinaryResource
+                    res = CloudinaryResource(video_url)
+
                     Story.objects.create(
                         auteur=utilisateur,
-                        video=video_url,  # on met l’URL Cloudinary directement
+                        video=res,
                         expire_le=timezone.now() + timedelta(hours=24)
                     )
                     return JsonResponse({"status": "success", "message": "Story vidéo enregistrée."})
                 else:
                     return JsonResponse({"status": "error", "message": "URL vidéo manquante."})
 
-            # Sinon, c’est une image via formulaire classique
             else:
                 image = request.FILES.get("image")
                 if image:
@@ -1395,7 +1397,6 @@ def ajouter_story_ajax(request):
             return JsonResponse({"status": "error", "message": str(e)})
 
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"}, status=405)
-
 
 
 load_dotenv()
