@@ -578,24 +578,22 @@ function showStory() {
   const progressBar = document.querySelector("#storyProgressBar .progress-bar");
 
   let content = "";
+  let mediaUrl = story.type === "image" ? story.image : story.video;
 
-  // 🔐 Vérifie que l'URL est valide
-  if (!story.media_url || story.media_url === "") {
+  if (!mediaUrl || mediaUrl === "") {
     content = `<p class="text-danger">Erreur : média introuvable</p>`;
   } else if (story.type === "image") {
-    content = `
-      <img src="${story.media_url}" class="w-100" style="max-height:500px; object-fit:contain;">
-    `;
+    content = `<img src="${mediaUrl}" class="w-100" style="max-height:500px; object-fit:contain;">`;
   } else if (story.type === "video") {
     content = `
       <video id="storyVideo" class="w-100" style="max-height:500px;" autoplay muted controls playsinline>
-        <source src="${story.media_url}" type="video/mp4">
+        <source src="${mediaUrl}" type="video/mp4">
         Votre navigateur ne prend pas en charge la vidéo.
       </video>
     `;
   }
 
-  console.log("Chargement story :", story.media_url, "Type:", story.type);
+  console.log("🔄 Story chargée:", mediaUrl, "Type:", story.type);
 
   contentContainer.innerHTML = `
     ${content}
@@ -646,6 +644,7 @@ function showStory() {
     }
   }, 100);
 }
+
 
 
 function togglePause() {

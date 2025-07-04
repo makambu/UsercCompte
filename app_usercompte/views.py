@@ -1353,9 +1353,6 @@ def notifier_amis_story(utilisateur):
             date=timezone.now()
         )
 
-
-
-
 @csrf_exempt
 def ajouter_story_ajax(request):
     user_id = request.session.get("user_id")
@@ -1366,20 +1363,22 @@ def ajouter_story_ajax(request):
 
     if request.method == "POST":
         try:
+            # Si c’est un JSON → ajout vidéo Cloudinary
             if request.content_type == "application/json":
                 data = json.loads(request.body)
                 video_url = data.get("video_url")
 
                 if video_url:
-                    # Crée un objet CloudinaryResource à partir de l'URL
-                    story = Story.objects.create(
+                    Story.objects.create(
                         auteur=utilisateur,
-                        video=CloudinaryResource(video_url),
+                        video=video_url,  # on met l’URL Cloudinary directement
                         expire_le=timezone.now() + timedelta(hours=24)
                     )
                     return JsonResponse({"status": "success", "message": "Story vidéo enregistrée."})
                 else:
                     return JsonResponse({"status": "error", "message": "URL vidéo manquante."})
+
+            # Sinon, c’est une image via formulaire classique
             else:
                 image = request.FILES.get("image")
                 if image:
@@ -1391,10 +1390,13 @@ def ajouter_story_ajax(request):
                     return JsonResponse({"status": "success", "message": "Story image enregistrée."})
                 else:
                     return JsonResponse({"status": "error", "message": "Aucun fichier fourni."})
+
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)})
 
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"}, status=405)
+
+
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
