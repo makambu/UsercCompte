@@ -579,16 +579,23 @@ function showStory() {
 
   let content = "";
 
-  if (story.type === "image") {
-    content = `<img src="${story.media_url}" class="w-100" style="max-height:500px; object-fit:contain;">`;
+  // 🔐 Vérifie que l'URL est valide
+  if (!story.media_url || story.media_url === "") {
+    content = `<p class="text-danger">Erreur : média introuvable</p>`;
+  } else if (story.type === "image") {
+    content = `
+      <img src="${story.media_url}" class="w-100" style="max-height:500px; object-fit:contain;">
+    `;
   } else if (story.type === "video") {
-    content = `<video id="storyVideo" class="w-100" style="max-height:500px;" autoplay muted controls playsinline>
-                 <source src="${story.media_url}">
-                 Votre navigateur ne prend pas en charge la vidéo.
-               </video>`;
+    content = `
+      <video id="storyVideo" class="w-100" style="max-height:500px;" autoplay muted controls playsinline>
+        <source src="${story.media_url}" type="video/mp4">
+        Votre navigateur ne prend pas en charge la vidéo.
+      </video>
+    `;
   }
 
-  console.log("Chargement story :", story.media_url, "MIME:", story.mime_type);
+  console.log("Chargement story :", story.media_url, "Type:", story.type);
 
   contentContainer.innerHTML = `
     ${content}
@@ -618,21 +625,15 @@ function showStory() {
     `;
   }
 
+  // Bouton de suppression
   const deleteBtn = document.getElementById("deleteStoryContainer");
-  if (estProprietaireStory) {
-    deleteBtn.style.display = "block";
-  } else {
-    deleteBtn.style.display = "none";
-  }
+  deleteBtn.style.display = estProprietaireStory ? "block" : "none";
 
-
-  // Démarrer la progression
+  // Progression automatique
   progress = 0;
   clearInterval(interval);
-
   const duration = story.type === "image" ? 5000 : 15000;
   const step = 100 / (duration / 100);
-
   interval = setInterval(() => {
     if (!paused) {
       progress += step;
@@ -645,6 +646,7 @@ function showStory() {
     }
   }, 100);
 }
+
 
 function togglePause() {
   paused = !paused;
