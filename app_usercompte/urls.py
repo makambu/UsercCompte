@@ -21,6 +21,7 @@ urlpatterns = [
     path('commenter/<int:blog_id>/', views.ajouter_commentaire, name='ajouter_commentaire'),
     path('blog_Views/', views.BlogViews, name='blog_Views'),
     path('notice/', views.notice_view, name='notice_view'),
+    path("ajax/marquer_notifs_lues/", views.marquer_notifs_lues, name="marquer_notifs_lues"),
     path('videos/', views.liste_videos, name='liste_videos'),
     path('videos/<int:video_id>/like/', views.liker_video, name='liker_video'),
     path('videos/<int:video_id>/comment/', views.commenter_video, name='commenter_video'),

@@ -59,8 +59,16 @@
                 <small class="text-muted">{{ inv.date_envoi|date:"d/m/Y H:i" }}</small>
             </div>
             <div>
-                <button onclick="gererInvitation({{ inv.id }}, 'accepter')" class="btn btn-success btn-sm me-1">Accepter</button>
-                <button onclick="gererInvitation({{ inv.id }}, 'refuser')" class="btn btn-danger btn-sm">Refuser</button>
+                <button onclick="gererInvitation({{ inv.id }}, 'accepter')" class="btn btn-success btn-sm me-1" data-bs-toggle="tooltip"
+                  data-bs-placement="top" title="Accepter l'invitation" aria-label="Accepter">
+                  <i class="bi bi-check-lg"></i>
+                </button>
+                
+                <button onclick="gererInvitation({{ inv.id }}, 'refuser')" class="btn btn-danger btn-sm" data-bs-toggle="tooltip"
+                  data-bs-placement="top" title="Refuser l'invitation" aria-label="Refuser">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+
             </div>
         </div>
     </div>
@@ -174,5 +182,16 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 });
 </script>
+
+<!-- Scripts bouton -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+      new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+  });
+</script>
+
 
 {% endblock %}

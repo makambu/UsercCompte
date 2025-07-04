@@ -1,6 +1,6 @@
 {% load static %}
 
-<!-- Toast pour notifications (en haut au milieu) -->
+<!-- Toast en haut-centre -->
 <div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 1055; top: 70px;">
   <div id="notifToast" class="toast align-items-center text-bg-primary border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
     <div class="d-flex">
@@ -15,7 +15,6 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-
   function showToast(message, type = 'primary') {
     const toastEl = document.getElementById('notifToast');
     const toastMsg = document.getElementById('toastMessage');
@@ -32,12 +31,22 @@ document.addEventListener("DOMContentLoaded", function () {
       sound.pause();
       sound.currentTime = 0;
       sound.play().catch((e) => {
-        console.warn("Son non autorisé par le navigateur : ", e);
+        console.warn("Son bloqué : ", e);
       });
     }
   }
 
-  // WebSocket global notifications
+  function updateNoticeBadge(increment = 1) {
+    const badge = document.getElementById("badge-notice-count");
+    if (badge) {
+      let count = parseInt(badge.textContent || "0");
+      count += increment;
+      badge.textContent = count;
+      badge.style.display = 'inline-block';
+    }
+  }
+
+  // WebSocket : notifications temps réel
   const notifSocket = new WebSocket(
     (window.location.protocol === "https:" ? "wss" : "ws") + '://' + window.location.host + '/ws/notifications/'
   );
@@ -48,10 +57,46 @@ document.addEventListener("DOMContentLoaded", function () {
     if (data.type === "invitation_ami") {
       showToast(`📨 Nouvelle invitation de ${data.invitation.emetteur.nom}`);
       playNotifSound();
+      updateNoticeBadge();
     } else if (data.type === "like" || data.type === "commentaire") {
       showToast(`💬 Nouvelle interaction : ${data.message}`, 'info');
       playNotifSound();
+      updateNoticeBadge();
     }
   };
+
+  // Marquer notifications comme lues quand on clique
+  document.getElementById("notif-link")?.addEventListener("click", function () {
+    const badge = document.getElementById("badge-notice-count");
+    if (badge) {
+      badge.textContent = "";
+      badge.style.display = "none";
+    }
+
+    // AJAX pour marquer comme lues
+    fetch("/ajax/marquer_notifs_lues/", {
+      method: "POST",
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken'),
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+  });
+
+  // Utilitaire CSRF
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let c of cookies) {
+        c = c.trim();
+        if (c.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(c.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
 });
 </script>

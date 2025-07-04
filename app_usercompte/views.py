@@ -55,7 +55,7 @@ def homes(request):
     reset_requested = request.GET.get('reset') == 'true'
     search_query = request.GET.get('q', '').strip()
 
-    # Gestion reset mot de passe
+    # Gestion reset mot de passe (POST)
     if request.method == 'POST' and request.POST.get('action') == 'reset_password':
         email = request.POST.get('email')
         new_password = request.POST.get('new_password')
@@ -69,7 +69,7 @@ def homes(request):
             messages.error(request, "Email introuvable.")
             reset_requested = True
 
-    # Si non connecté
+    # Utilisateur non connecté : affichage public
     if not user_id:
         utilisateurs = Profil.objects.filter(status=1).order_by('-created_on')
         if search_query:
@@ -81,26 +81,28 @@ def homes(request):
             'reset_required': reset_requested,
         })
 
-    # Vérification de l'inactivité serveur
+    # Utilisateur connecté
     try:
         utilisateur_connecte = Profil.objects.get(id=user_id)
-
-        if utilisateur_connecte.derniere_activité < timezone.now() - timedelta(minutes=30):
-            utilisateur_connecte.is_online = False
-            utilisateur_connecte.save()
-            request.session.flush()
-            messages.warning(request, "Session expirée pour inactivité.")
-            return redirect("login_user")
-
     except Profil.DoesNotExist:
         request.session.flush()
         return redirect('login_user')
 
-    # Mise à jour de la dernière activité
+    # Vérification inactivité côté serveur (30 minutes)
+    if utilisateur_connecte.derniere_activité < timezone.now() - timedelta(minutes=30):
+        # Déconnexion forcée + statut hors ligne
+        utilisateur_connecte.is_online = False
+        utilisateur_connecte.save()
+        request.session.flush()
+        messages.warning(request, "Session expirée pour inactivité.")
+        return redirect("login_user")
+
+    # Mise à jour dernière activité à maintenant
     utilisateur_connecte.derniere_activité = timezone.now()
+    utilisateur_connecte.is_online = True  # au cas où, le statut online est remis
     utilisateur_connecte.save()
 
-    # Filtrage des autres utilisateurs
+    # Recherche utilisateurs (sauf soi)
     utilisateurs = Profil.objects.filter(status=1).exclude(id=user_id).order_by('-created_on')
     if search_query:
         utilisateurs = utilisateurs.filter(Q(nom__icontains=search_query) | Q(prenom__icontains=search_query))
@@ -109,7 +111,7 @@ def homes(request):
     now = timezone.now()
     Story.objects.filter(expire_le__lt=now).delete()
 
-    # Récup stories les plus récentes par auteur
+    # Récupérer dernières stories par auteur
     latest_stories = (
         Story.objects
         .filter(expire_le__gte=now)
@@ -689,6 +691,18 @@ def notice_view(request):
         'notifications': notifications,
         'invitations': invitations,  # 👈 nouveau
     })
+
+def marquer_notifs_lues(request):
+    if request.method == "POST":
+        user_id = request.session.get("user_id")
+        if not user_id:
+            return JsonResponse({"status": "unauthorized"}, status=403)
+
+        profil = get_object_or_404(Profil, id=user_id)
+        Notification.objects.filter(recepteur=profil, lu=False).update(lu=True)
+        return JsonResponse({"status": "ok"})
+
+    return JsonResponse({"status": "invalid"}, status=400)
 
 
 
@@ -1390,7 +1404,6 @@ def charger_historique(request):
     } for m in messages]
 
     return JsonResponse({"messages": data})
-
 
 
 def nom_utilisateur(request, user_id):

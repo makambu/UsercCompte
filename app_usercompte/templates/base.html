@@ -486,44 +486,38 @@
 
 
 <script>
-    let isNavigating = false;
+(() => {
+  const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 minutes en ms
+  let inactivityTimer;
 
-    // Quand l'utilisateur clique sur un lien interne → navigation normale
-    document.querySelectorAll('a').forEach(link => {
-        link.addEventListener('click', () => {
-            isNavigating = true;
-        });
+  // Remise à zéro du timer
+  function resetTimer() {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(logoutDueToInactivity, INACTIVITY_LIMIT);
+  }
+
+  // Appel pour déconnexion et redirection
+  function logoutDueToInactivity() {
+    fetch("{% url 'logout_ajax' %}", {
+      method: "POST",
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      keepalive: true
+    }).finally(() => {
+      alert("Vous avez été déconnecté(e) pour inactivité sur app-cgm. Veuillez se connectez à nouveau");
+      window.location.href = "{% url 'login_user' %}";
     });
+  }
 
-    // Idem pour les formulaires (comme logout manuel ou formulaire blog)
-    document.querySelectorAll('form').forEach(form => {
-        form.addEventListener('submit', () => {
-            isNavigating = true;
-        });
-    });
+  // Événements qui comptent comme activité
+  ['click', 'mousemove', 'keydown', 'scroll', 'touchstart'].forEach(event => {
+    document.addEventListener(event, resetTimer, true);
+  });
 
-    // Maintenant on intercepte uniquement si l'utilisateur ferme ou actualise (beforeunload) sendBeacon
-  let inactivityTimeout = null;
-  const LOGOUT_URL = "{% url 'logout_ajax' %}";
-  const CSRF_TOKEN = '{{ csrf_token }}';
-
-// Fonction pour déconnecter via AJAX (fetch ou sendBeacon)
-function logoutUser() {
-    if (navigator.sendBeacon) {
-        const blob = new Blob([], { type: 'application/x-www-form-urlencoded' });
-        navigator.sendBeacon(LOGOUT_URL, blob);
-    } else {
-        fetch(LOGOUT_URL, {
-            method: "POST",
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': CSRF_TOKEN,
-            },
-            keepalive: true
-        });
-    }
-}
-
+  resetTimer(); // démarre le timer au chargement
+})();
 </script>
 
 
@@ -703,7 +697,7 @@ function afficherLikesStory() {
     });
 }
 
-// 🔒 Token CSRF
+// Token CSRF
 function getCSRFToken() {
   const name = 'csrftoken';
   const cookies = document.cookie.split(';');

@@ -71,16 +71,18 @@
 
         {% url 'notice_view' as notice_url %}
         <li class="nav-item">
-          <a class="nav-link position-relative d-flex align-items-center {% if request.path == notice_url %}active bg-secondary rounded{% endif %}"
+          <a id="notif-link"
+            class="nav-link position-relative d-flex align-items-center {% if request.path == notice_url %}active bg-secondary rounded{% endif %}"
             href="{{ notice_url }}">
             <i class="bi bi-bell me-1"></i> Notice
-            {% if total_notices > 0 %}
-            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger mt-2">
+            <span id="badge-notice-count"
+              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger mt-2" {% if total_notices==0 %}style="display: none;" {% endif %}>
               {{ total_notices }}
             </span>
-            {% endif %}
           </a>
         </li>
+
+
 
 
         {% url 'AboutSIte' as about_url %}

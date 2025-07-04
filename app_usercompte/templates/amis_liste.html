@@ -21,8 +21,17 @@
       <strong>{{ inv.emetteur.nom }} {{ inv.emetteur.prenom }}</strong>
     </div>
     <div>
-      <button onclick="gererInvitation({{ inv.id }}, 'accepter')" class="btn btn-success btn-sm me-1">Accepter</button>
-      <button onclick="gererInvitation({{ inv.id }}, 'refuser')" class="btn btn-danger btn-sm">Refuser</button>
+      <!-- Bouton Accepter invitation -->
+      <button onclick="gererInvitation({{ inv.id }}, 'accepter')" class="btn btn-success btn-sm me-1" data-bs-toggle="tooltip"
+        data-bs-placement="top" title="Accepter l'invitation">
+        <i class="bi bi-check-lg"></i>
+      </button>
+
+      <!-- Bouton Refuser invitation -->
+      <button onclick="gererInvitation({{ inv.id }}, 'refuser')" class="btn btn-danger btn-sm" data-bs-toggle="tooltip"
+        data-bs-placement="top" title="Refuser l'invitation">
+        <i class="bi bi-x-lg"></i>
+      </button>
     </div>
   </div>
   {% endfor %}
@@ -31,11 +40,16 @@
   <div class="d-flex justify-content-center mt-2 pagination">
     {% if invitations_recues.has_previous %}
     <a href="{% url 'mes_amis' %}?page_inv={{ invitations_recues.previous_page_number }}"
-      class="btn btn-outline-primary me-2">Précédent</a>
+      class="btn btn-outline-primary btn-sm me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Page précédente">
+      <i class="bi bi-arrow-left-circle"></i>
+    </a>
     {% endif %}
+    
     {% if invitations_recues.has_next %}
-    <a href="{% url 'mes_amis' %}?page_inv={{ invitations_recues.next_page_number }}"
-      class="btn btn-outline-primary">Suivant</a>
+    <a href="{% url 'mes_amis' %}?page_inv={{ invitations_recues.next_page_number }}" class="btn btn-outline-primary btn-sm"
+      data-bs-toggle="tooltip" data-bs-placement="top" title="Page suivante">
+      <i class="bi bi-arrow-right-circle"></i>
+    </a>
     {% endif %}
   </div>
 
@@ -63,23 +77,49 @@
         <strong>{{ ami.nom }} {{ ami.prenom }}</strong>
       </div>
       <div>
-        <a href="{% url 'voir_profil' ami.id %}" class="btn btn-outline-secondary btn-sm">Profil</a>
-        <a href="{% url 'chat_user' ami.id %}" class="btn btn-outline-success btn-sm">
-          <i class="fas fa-comments me-1"></i> Solola
-        </a>
+        <!-- Bouton Profil -->
+          <a href="{% url 'voir_profil' ami.id %}" class="btn btn-outline-secondary btn-sm me-1" data-bs-toggle="tooltip"
+            data-bs-placement="top" title="Voir le profil">
+            <i class="bi bi-person-circle"></i>
+          </a>
+
+          <!-- Bouton Solola (Chat) -->
+          <a href="{% url 'chat_user' ami.id %}" class="btn btn-outline-success btn-sm me-1" data-bs-toggle="tooltip"
+            data-bs-placement="top" title="Solola (discuter)">
+            <i class="bi bi-chat-dots-fill"></i>
+          </a>
       </div>
     </div>
   {% endfor %}
 
   <!-- PAGINATION -->
   <div class="d-flex justify-content-center mt-1 pagination">
-    {% if amis.has_previous %}
-      <a href="{% url 'mes_amis' %}?page_amis={{ amis.previous_page_number }}" class="btn btn-outline-primary w-50 me-1">Précédent</a>
-    {% endif %}
-    {% if amis.has_next %}
-      <a href="{% url 'mes_amis' %}?page_amis={{ amis.next_page_number }}" class="btn btn-outline-primary w-50 me-1">Suivant</a>
-    {% endif %}
+      {% if amis.has_previous %}
+      <a href="{% url 'mes_amis' %}?page_amis={{ amis.previous_page_number }}"
+        class="btn btn-outline-primary btn-sm w-50 me-1" data-bs-toggle="tooltip" data-bs-placement="top"
+        title="Page précédente">
+        <i class="bi bi-arrow-left-circle"></i>
+      </a>
+      {% endif %}
+      
+      {% if amis.has_next %}
+      <a href="{% url 'mes_amis' %}?page_amis={{ amis.next_page_number }}"
+        class="btn btn-outline-primary btn-sm w-50 {% if amis.has_previous %}ms-1{% endif %}" data-bs-toggle="tooltip"
+        data-bs-placement="top" title="Page suivante">
+        <i class="bi bi-arrow-right-circle"></i>
+      </a>
+      {% endif %}
+
   </div>
 {% else %}
   <p class="text-muted">Vous n’avez pas encore d’ami(e)s.</p>
 {% endif %}
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltips.forEach(el => new bootstrap.Tooltip(el));
+  });
+</script>
+
