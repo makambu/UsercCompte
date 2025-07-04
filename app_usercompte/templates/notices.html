@@ -33,8 +33,12 @@
     <div class="card shadow-sm mb-3" id="invitation-{{ inv.id }}">
         <div class="card-body d-flex align-items-center">
             <a href="{% url 'voir_profil' inv.emetteur.id %}">
-                <img src="{{ inv.emetteur.image_profil.url if inv.emetteur.image_profil else static 'images/image_4.png' }}"
-                    class="rounded-circle me-3" width="50" height="50">
+                {% if ami.image_profil %}
+                <img src="{{ ami.image_profil.url }}" class="rounded-circle me-2" width="40" height="40" style="object-fit: fill;">
+                {% else %}
+                <img src="{% static 'images/image_4.png' %}" class="rounded-circle me-2" width="40" height="40"
+                    style="object-fit: fill;">
+                {% endif %}
             </a>
             <div class="flex-grow-1">
                 <p class="mb-1">
