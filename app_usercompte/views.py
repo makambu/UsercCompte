@@ -1271,7 +1271,7 @@ def stories_utilisateur(request, user_id):
         story_data.append({
             "id": story.id,
             "type": story.get_type(),
-            "media_url": url,
+            "media_url": story.get_media_url(),
             "mime_type": get_mime_type(url),
             "description": getattr(story, "description", ""),
             "date": story.date_creation.strftime("%d/%m/%Y %H:%M"),

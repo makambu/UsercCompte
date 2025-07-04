@@ -583,7 +583,7 @@ function showStory() {
     content = `<img src="${story.media_url}" class="w-100" style="max-height:500px; object-fit:contain;">`;
   } else if (story.type === "video") {
     content = `<video id="storyVideo" class="w-100" style="max-height:500px;" autoplay muted controls playsinline>
-                 <source src="${story.media_url}" type="${story.mime_type || 'video/mp4'}">
+                 <source src="${story.media_url}">
                  Votre navigateur ne prend pas en charge la vidéo.
                </video>`;
   }
@@ -745,14 +745,14 @@ if (isVideo) {
   formData.append("file", fichier);
   formData.append("upload_preset", "story_direct_upload");
 
-  // Remplacer video/upload → auto/upload
-  fetch("https://api.cloudinary.com/v1_1/dml7j5pjj/auto/upload", {
+  fetch("https://api.cloudinary.com/v1_1/dml7j5pjj/video/upload", {
     method: "POST",
     body: formData
   })
-    .then(res => res.json())
+    .then(res => re.s.json())
     .then(data => {
-      const videoUrl = data.secure_url;
+      const videoUrl = data.secure_url.replace(/\/upload\//, "/upload/f_mp4/");
+    })
 
       if (!videoUrl) {
         alert("Erreur : Cloudinary n’a pas renvoyé l’URL.");
