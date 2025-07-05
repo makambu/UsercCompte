@@ -40,24 +40,42 @@ class InvalidUserSessionMiddleware:
         return self.get_response(request)
 
 
+EXCLUDED_PATHS = [
+    "/login/",          # chemin de connexion
+    "/logout/",         # chemin de déconnexion
+    "/ajax/logout/",    # logout ajax
+    "/ajax/ping/",      # ping ajax
+    "/admin/",          # admin Django
+    "/static/",         # fichiers statiques
+    "/media/",          # fichiers médias
+    "/splash/",         # écran splash optionnel
+]
+
 class UpdateLastActivityMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
+        path = request.path
+
+        # Ignorer certaines routes pour ne pas fausser les connexions ou assets
+        if any(path.startswith(p) for p in EXCLUDED_PATHS):
+            return self.get_response(request)
+
         user_id = request.session.get("user_id")
         if user_id:
             try:
                 user = Profil.objects.get(id=user_id)
-                # Vérifie l'inactivité
-                if user.derniere_activité < timezone.now() - timedelta(minutes=30):
+
+                # Vérifie inactivité seulement si derniere_activité est définie
+                if user.derniere_activité and user.derniere_activité < timezone.now() - timedelta(minutes=30):
                     user.is_online = False
-                    user.save()
-                    request.session.flush()  # Déconnecte l'utilisateur
+                    user.save(update_fields=["is_online"])
+                    request.session.flush()  # ❌ déconnecte l'utilisateur
                 else:
                     user.derniere_activité = timezone.now()
                     user.is_online = True
-                    user.save()
+                    user.save(update_fields=["derniere_activité", "is_online"])
             except Profil.DoesNotExist:
                 request.session.flush()
 
