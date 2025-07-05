@@ -55,7 +55,7 @@ def homes(request):
     reset_requested = request.GET.get('reset') == 'true'
     search_query = request.GET.get('q', '').strip()
 
-    # Gestion reset mot de passe
+    # Gestion reset mot de passe (POST)
     if request.method == 'POST' and request.POST.get('action') == 'reset_password':
         email = request.POST.get('email')
         new_password = request.POST.get('new_password')
@@ -69,7 +69,7 @@ def homes(request):
             messages.error(request, "Email introuvable.")
             reset_requested = True
 
-    # Si non connecté → vue publique
+    # Utilisateur non connecté : affichage public
     if not user_id:
         utilisateurs = Profil.objects.filter(status=1).order_by('-created_on')
         if search_query:
@@ -81,19 +81,37 @@ def homes(request):
             'reset_required': reset_requested,
         })
 
+    # Utilisateur connecté
     try:
         utilisateur_connecte = Profil.objects.get(id=user_id)
     except Profil.DoesNotExist:
         request.session.flush()
-        return redirect("homes")
+        return redirect('login_user')
 
+    # Vérification inactivité côté serveur (30 minutes)
+    if utilisateur_connecte.derniere_activité < timezone.now() - timedelta(minutes=30):
+        # Déconnexion forcée + statut hors ligne
+        utilisateur_connecte.is_online = False
+        utilisateur_connecte.save()
+        request.session.flush()
+        messages.warning(request, "Session expirée pour inactivité.")
+        return redirect("login_user")
+
+    # Mise à jour dernière activité à maintenant
+    utilisateur_connecte.derniere_activité = timezone.now()
+    utilisateur_connecte.is_online = True  # au cas où, le statut online est remis
+    utilisateur_connecte.save()
+
+    # Recherche utilisateurs (sauf soi)
     utilisateurs = Profil.objects.filter(status=1).exclude(id=user_id).order_by('-created_on')
     if search_query:
         utilisateurs = utilisateurs.filter(Q(nom__icontains=search_query) | Q(prenom__icontains=search_query))
 
+    # Suppression stories expirées
     now = timezone.now()
     Story.objects.filter(expire_le__lt=now).delete()
 
+    # Récupérer dernières stories par auteur
     latest_stories = (
         Story.objects
         .filter(expire_le__gte=now)
@@ -105,6 +123,7 @@ def homes(request):
         date_creation__in=[item['latest_date'] for item in latest_stories]
     ).select_related('auteur')
 
+    # Notifications non lues
     total_notices = utilisateur_connecte.notifications.filter(est_lue=False).count()
 
     return render(request, 'base.html', {
@@ -1429,20 +1448,6 @@ def nom_utilisateur(request, user_id):
         })
     except Profil.DoesNotExist:
         return JsonResponse({"nom": "Inconnu", "last_message": ""})
-
-@csrf_exempt
-def ping_user(request):
-    user_id = request.session.get("user_id")
-    if request.method == "POST" and user_id:
-        try:
-            profil = Profil.objects.get(id=user_id)
-            profil.derniere_activité = timezone.now()
-            profil.save(update_fields=["derniere_activité"])
-            return JsonResponse({"status": "ok", "message": "Session prolongée."})
-        except Profil.DoesNotExist:
-            return JsonResponse({"status": "error", "message": "Utilisateur introuvable."}, status=404)
-    return JsonResponse({"status": "error", "message": "Requête non autorisée."}, status=403)
-
 
 
 
