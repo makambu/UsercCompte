@@ -17,9 +17,9 @@ SECRET_KEY = 'django-insecure-k08ogl=of0o93xfq!v5fglp$5x(ij*8yv525d(xoc+&a5kf32f
 # Sécurité
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=False, cast=bool)
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "app-cgm.onrender.com", "app-cgm-v4s4.onrender.com"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "app-cgm-v4s4.onrender.com"]
 
-CSRF_TRUSTED_ORIGINS = ['https://app-cgm.onrender.com']
+CSRF_TRUSTED_ORIGINS = ['https://app-cgm-v4s4.onrender.com']
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
