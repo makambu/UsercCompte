@@ -98,9 +98,9 @@ def homes(request):
         return redirect("login_user")
 
     # Mise à jour dernière activité à maintenant
-    utilisateur_connecte.derniere_activité = timezone.now()
-    utilisateur_connecte.is_online = True  # au cas où, le statut online est remis
-    utilisateur_connecte.save()
+    # utilisateur_connecte.derniere_activité = timezone.now()
+    # utilisateur_connecte.is_online = True  # au cas où, le statut online est remis
+    # utilisateur_connecte.save()
 
     # Recherche utilisateurs (sauf soi)
     utilisateurs = Profil.objects.filter(status=1).exclude(id=user_id).order_by('-created_on')

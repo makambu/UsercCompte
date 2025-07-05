@@ -527,6 +527,80 @@ window.addEventListener('beforeunload', () => {
   }
 });
 </script>
+<script>
+let isNavigating = false;
+
+document.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => { isNavigating = true; });
+});
+document.querySelectorAll('form').forEach(form => {
+    form.addEventListener('submit', () => { isNavigating = true; });
+});
+
+const LOGOUT_URL = "{% url 'logout_ajax' %}";
+const PING_URL = "{% url 'ping_user' %}";
+const CSRF_TOKEN = '{{ csrf_token }}';
+
+// Déconnexion si l'utilisateur quitte le site sans navigation contrôlée
+window.addEventListener('beforeunload', () => {
+    if (!isNavigating) {
+        logoutUser();
+    }
+});
+
+// Fonction de ping pour prolonger la session côté serveur
+function pingServeur() {
+    fetch(PING_URL, {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": CSRF_TOKEN,
+            "X-Requested-With": "XMLHttpRequest"
+        }
+    }).then(response => {
+        if (!response.ok) {
+            console.warn("Ping échoué");
+        }
+    });
+}
+
+// Fonction de déconnexion AJAX
+function logoutUser() {
+    if (navigator.sendBeacon) {
+        const blob = new Blob([], { type: 'application/x-www-form-urlencoded' });
+        navigator.sendBeacon(LOGOUT_URL, blob);
+    } else {
+        fetch(LOGOUT_URL, {
+            method: "POST",
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': CSRF_TOKEN,
+            },
+            keepalive: true
+        });
+    }
+}
+
+// ⏱️ Alerte session : après 25 minutes d’inactivité
+let alerteTimeout = setTimeout(() => {
+    afficherAlerteSession();
+}, 25 * 60 * 1000);  // 25 minutes
+
+// Fonction pour afficher une alerte intuitive
+function afficherAlerteSession() {
+    const confirmation = confirm("⚠️ Vous êtes inactif depuis un moment.\nSouhaitez-vous rester connecté ?");
+
+    if (confirmation) {
+        // Prolonger la session
+        pingServeur();
+        clearTimeout(alerteTimeout);
+        alerteTimeout = setTimeout(() => {
+            afficherAlerteSession();
+        }, 25 * 60 * 1000); // Redémarre pour 25 min
+    } else {
+        alert("Votre session va se terminer dans quelques instants...");
+    }
+}
+</script>
 
 
 
