@@ -89,7 +89,7 @@ def homes(request):
         return redirect('login_user')
 
     # Vérification inactivité côté serveur (30 minutes)
-    if utilisateur_connecte.derniere_activité < timezone.now() - timedelta(minutes=30):
+    if utilisateur_connecte.derniere_activité < timezone.now() - timedelta(minutes=50):
         # Déconnexion forcée + statut hors ligne
         utilisateur_connecte.is_online = False
         utilisateur_connecte.save()

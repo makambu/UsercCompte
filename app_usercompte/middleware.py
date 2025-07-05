@@ -48,7 +48,7 @@ class UpdateLastActivityMiddleware:
             try:
                 user = Profil.objects.get(id=user_id)
                 user.derniere_activité = timezone.now()
-                user.is_online = True  # 🔥 Ajoute ceci pour mettre à jour online
+                user.is_online = True  # Ajoute ceci pour mettre à jour online
                 user.save(update_fields=["derniere_activité", "is_online"])
             except Profil.DoesNotExist:
                 request.session.flush()
