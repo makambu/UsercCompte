@@ -151,21 +151,21 @@ def homes(request):
         'stories': story_queryset,
     })
 
-    
+
 def login_user(request):
     if request.method == 'POST':
-        request.session.flush()  # Nettoyer d’anciennes sessions en toute sécurité
-
         phone = request.POST.get('phone')
         password = request.POST.get('password')
 
         try:
             user = Profil.objects.get(telephone=phone, mot_de_passe=password)
+            request.session.flush()  # Place ici (après vérification)
+            request.session['user_id'] = user.id  # Important : doit être mis après flush
+
             user.derniere_connexion = timezone.now()
             user.is_online = True 
             user.save()
 
-            request.session['user_id'] = user.id  # Ajout après session propre
             return redirect('homes')
         except Profil.DoesNotExist:
             messages.error(request, "Compte invalide")
