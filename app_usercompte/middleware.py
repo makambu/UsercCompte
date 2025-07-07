@@ -1,6 +1,6 @@
 from django.utils import timezone
 from django.conf import settings
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect
 from django.contrib import messages
 from app_usercompte.models import Profil
 
@@ -54,24 +54,5 @@ class UpdateLastActivityMiddleware:
                 request.session.flush()
 
         return self.get_response(request)
-
-
-class RequireLoginMiddleware:
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    def __call__(self, request):
-        # Autoriser les pages publiques
-        if request.path.startswith("/static/") or request.path in ["/login_user/", "/register_user/", "/"]:
-            return self.get_response(request)
-
-        # Protéger les pages privées
-        if not request.session.get("user_id"):
-            return render(request, "base.html", {
-                "login_required": True,
-                "utilisateurs": Profil.objects.filter(status=1).order_by('-created_on')
-            })
-
-        return self.get_response(request)
-
+        
 
