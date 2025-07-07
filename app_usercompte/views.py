@@ -159,7 +159,8 @@ def login_user(request):
 
         try:
             user = Profil.objects.get(telephone=phone, mot_de_passe=password)
-            request.session.flush()  # Place ici (après vérification)
+            #request.session.flush()  # Place ici (après vérification)
+            request.session.clear()
             request.session['user_id'] = user.id  # Important : doit être mis après flush
 
             user.derniere_connexion = timezone.now()

@@ -24,6 +24,9 @@ CSRF_TRUSTED_ORIGINS = ['https://app-cgm-v4s4.onrender.com']
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+SESSION_SAVE_EVERY_REQUEST = True
+
+
 
 # Applications
 INSTALLED_APPS = [
