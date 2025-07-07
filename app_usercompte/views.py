@@ -55,7 +55,7 @@ def homes(request):
     reset_requested = request.GET.get('reset') == 'true'
     search_query = request.GET.get('q', '').strip()
 
-    # Gestion reset mot de passe (POST)
+    # Gestion reset mot de passe
     if request.method == 'POST' and request.POST.get('action') == 'reset_password':
         email = request.POST.get('email')
         new_password = request.POST.get('new_password')
@@ -69,40 +69,56 @@ def homes(request):
             messages.error(request, "Email introuvable.")
             reset_requested = True
 
-    # Utilisateur non connecté : affichage public
+    # S'il n'y a pas d'user_id => non connecté
     if not user_id:
         utilisateurs = Profil.objects.filter(status=1).order_by('-created_on')
         if search_query:
             utilisateurs = utilisateurs.filter(Q(nom__icontains=search_query) | Q(prenom__icontains=search_query))
+
         return render(request, 'base.html', {
             'utilisateurs': utilisateurs,
             'search_query': search_query,
             'login_required': True,
             'reset_required': reset_requested,
+            'utilisateur_connecte': None,
         })
 
-    # Utilisateur connecté
+    # Utilisateur connecté mais vérification d'existence
     try:
         utilisateur_connecte = Profil.objects.get(id=user_id)
     except Profil.DoesNotExist:
+        utilisateurs = Profil.objects.filter(status=1).order_by('-created_on')
         request.session.flush()
-        return redirect('login_user')
+        messages.warning(request, "Session expirée ou utilisateur introuvable.")
+        return render(request, 'base.html', {
+            'utilisateurs': utilisateurs,
+            'search_query': search_query,
+            'login_required': True,
+            'reset_required': False,
+            'utilisateur_connecte': None,
+        })
 
-    # Vérification inactivité côté serveur (30 minutes)
+    # Session inactive depuis plus de 50 minutes
     if utilisateur_connecte.derniere_activité < timezone.now() - timedelta(minutes=50):
-        # Déconnexion forcée + statut hors ligne
         utilisateur_connecte.is_online = False
         utilisateur_connecte.save()
         request.session.flush()
         messages.warning(request, "Session expirée pour inactivité.")
-        return redirect("login_user")
+        utilisateurs = Profil.objects.filter(status=1).order_by('-created_on')
+        return render(request, 'base.html', {
+            'utilisateurs': utilisateurs,
+            'search_query': search_query,
+            'login_required': True,
+            'reset_required': False,
+            'utilisateur_connecte': None,
+        })
 
-    # Mise à jour dernière activité à maintenant
+    # Mise à jour activité
     utilisateur_connecte.derniere_activité = timezone.now()
-    utilisateur_connecte.is_online = True  # au cas où, le statut online est remis
+    utilisateur_connecte.is_online = True
     utilisateur_connecte.save()
 
-    # Recherche utilisateurs (sauf soi)
+    # Recherche
     utilisateurs = Profil.objects.filter(status=1).exclude(id=user_id).order_by('-created_on')
     if search_query:
         utilisateurs = utilisateurs.filter(Q(nom__icontains=search_query) | Q(prenom__icontains=search_query))
@@ -111,7 +127,7 @@ def homes(request):
     now = timezone.now()
     Story.objects.filter(expire_le__lt=now).delete()
 
-    # Récupérer dernières stories par auteur
+    # Dernières stories
     latest_stories = (
         Story.objects
         .filter(expire_le__gte=now)
@@ -123,7 +139,6 @@ def homes(request):
         date_creation__in=[item['latest_date'] for item in latest_stories]
     ).select_related('auteur')
 
-    # Notifications non lues
     total_notices = utilisateur_connecte.notifications.filter(est_lue=False).count()
 
     return render(request, 'base.html', {
@@ -136,21 +151,22 @@ def homes(request):
         'stories': story_queryset,
     })
 
+    
 def login_user(request):
     if request.method == 'POST':
+        request.session.flush()  # Nettoyer d’anciennes sessions en toute sécurité
+
         phone = request.POST.get('phone')
         password = request.POST.get('password')
 
         try:
             user = Profil.objects.get(telephone=phone, mot_de_passe=password)
-            if user.mot_de_passe == password:
-                user.derniere_connexion = timezone.now()
-                user.is_online = True 
-                user.save()
-                request.session['user_id'] = user.id
-                return redirect('homes')
-            else:
-                messages.error(request, "Mot de passe incorrect")
+            user.derniere_connexion = timezone.now()
+            user.is_online = True 
+            user.save()
+
+            request.session['user_id'] = user.id  # Ajout après session propre
+            return redirect('homes')
         except Profil.DoesNotExist:
             messages.error(request, "Compte invalide")
 

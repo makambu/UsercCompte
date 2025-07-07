@@ -51,7 +51,8 @@ class UpdateLastActivityMiddleware:
                 user.is_online = True  # Ajoute ceci pour mettre à jour online
                 user.save(update_fields=["derniere_activité", "is_online"])
             except Profil.DoesNotExist:
-                request.session.flush()
+                # On ne flush pas ici pour éviter SessionInterrupted
+                pass
 
         return self.get_response(request)
         
