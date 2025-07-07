@@ -53,6 +53,7 @@ MIDDLEWARE = [
     'app_usercompte.middleware.UpdateLastConnectionMiddleware',
     'app_usercompte.middleware.InvalidUserSessionMiddleware', 
     'app_usercompte.middleware.UpdateLastActivityMiddleware',
+    "app_usercompte.middleware.RequireLoginMiddleware",
 ]
 
 ROOT_URLCONF = 'UserCompte.urls'

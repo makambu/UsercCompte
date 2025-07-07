@@ -55,7 +55,7 @@ def homes(request):
     reset_requested = request.GET.get('reset') == 'true'
     search_query = request.GET.get('q', '').strip()
 
-    # Gestion reset mot de passe (POST)
+    # Si mot de passe oublié
     if request.method == 'POST' and request.POST.get('action') == 'reset_password':
         email = request.POST.get('email')
         new_password = request.POST.get('new_password')
@@ -69,11 +69,12 @@ def homes(request):
             messages.error(request, "Email introuvable.")
             reset_requested = True
 
-    # Utilisateur non connecté : affichage public
+    utilisateurs = Profil.objects.filter(status=1).order_by('-created_on')
+    if search_query:
+        utilisateurs = utilisateurs.filter(Q(nom__icontains=search_query) | Q(prenom__icontains=search_query))
+
+    # ➤ Utilisateur non connecté
     if not user_id:
-        utilisateurs = Profil.objects.filter(status=1).order_by('-created_on')
-        if search_query:
-            utilisateurs = utilisateurs.filter(Q(nom__icontains=search_query) | Q(prenom__icontains=search_query))
         return render(request, 'base.html', {
             'utilisateurs': utilisateurs,
             'search_query': search_query,
@@ -81,37 +82,39 @@ def homes(request):
             'reset_required': reset_requested,
         })
 
-    # Utilisateur connecté
+    # ➤ Chargement de l'utilisateur
     try:
         utilisateur_connecte = Profil.objects.get(id=user_id)
     except Profil.DoesNotExist:
         request.session.flush()
-        return redirect('login_user')
+        return render(request, 'base.html', {
+            'utilisateurs': utilisateurs,
+            'search_query': search_query,
+            'login_required': True,
+            'reset_required': False,
+        })
 
-    # Vérification inactivité côté serveur (30 minutes)
+    # ➤ Vérifier expiration
     if utilisateur_connecte.derniere_activité < timezone.now() - timedelta(minutes=50):
-        # Déconnexion forcée + statut hors ligne
         utilisateur_connecte.is_online = False
-        utilisateur_connecte.save()
+        utilisateur_connecte.save(update_fields=["is_online"])
         request.session.flush()
         messages.warning(request, "Session expirée pour inactivité.")
-        return redirect("login_user")
+        return render(request, 'base.html', {
+            'utilisateurs': utilisateurs,
+            'search_query': search_query,
+            'login_required': True,
+            'reset_required': False,
+        })
 
-    # Mise à jour dernière activité à maintenant
+    # ➤ Mettre à jour activité
     utilisateur_connecte.derniere_activité = timezone.now()
-    utilisateur_connecte.is_online = True  # au cas où, le statut online est remis
-    utilisateur_connecte.save()
+    utilisateur_connecte.is_online = True
+    utilisateur_connecte.save(update_fields=["derniere_activité", "is_online"])
 
-    # Recherche utilisateurs (sauf soi)
-    utilisateurs = Profil.objects.filter(status=1).exclude(id=user_id).order_by('-created_on')
-    if search_query:
-        utilisateurs = utilisateurs.filter(Q(nom__icontains=search_query) | Q(prenom__icontains=search_query))
-
-    # Suppression stories expirées
+    # ➤ Stories actives
     now = timezone.now()
     Story.objects.filter(expire_le__lt=now).delete()
-
-    # Récupérer dernières stories par auteur
     latest_stories = (
         Story.objects
         .filter(expire_le__gte=now)
@@ -123,11 +126,10 @@ def homes(request):
         date_creation__in=[item['latest_date'] for item in latest_stories]
     ).select_related('auteur')
 
-    # Notifications non lues
     total_notices = utilisateur_connecte.notifications.filter(est_lue=False).count()
 
     return render(request, 'base.html', {
-        'utilisateurs': utilisateurs,
+        'utilisateurs': utilisateurs.exclude(id=user_id),
         'utilisateur_connecte': utilisateur_connecte,
         'total_notices': total_notices,
         'search_query': search_query,
@@ -143,41 +145,18 @@ def login_user(request):
 
         try:
             user = Profil.objects.get(telephone=phone, mot_de_passe=password)
-            if user.mot_de_passe == password:
-                user.derniere_connexion = timezone.now()
-                user.is_online = True 
-                user.save()
-                request.session['user_id'] = user.id
-                return redirect('homes')
-            else:
-                messages.error(request, "Mot de passe incorrect")
+            user.derniere_connexion = timezone.now()
+            user.is_online = True
+            user.save()
+            request.session['user_id'] = user.id
+            return redirect('homes')
         except Profil.DoesNotExist:
-            messages.error(request, "Compte invalide")
+            messages.error(request, "Identifiants invalides")
 
     utilisateurs = Profil.objects.filter(status=1)
     return render(request, 'base.html', {'utilisateurs': utilisateurs, 'login_required': True})
 
-
 def logout_user(request):
-    user_id = request.session.get('user_id')
-    if user_id:
-        try:
-            user = Profil.objects.get(id=user_id)
-            user.is_online = False 
-            user.derniere_connexion = timezone.now()  # facultatif
-            user.save()
-        except Profil.DoesNotExist:
-            pass
-
-    request.session.flush()
-    return redirect('homes')
-
-
-@csrf_exempt  # À retirer si tu gères bien le CSRF côté JS
-def logout_ajax(request):
-    if request.method != 'POST':
-        return JsonResponse({'status': 'method_not_allowed'}, status=405)
-    
     user_id = request.session.get('user_id')
     if user_id:
         try:
@@ -185,10 +164,27 @@ def logout_ajax(request):
             user.is_online = False
             user.derniere_connexion = timezone.now()
             user.save()
-            logger.info(f"Utilisateur {user_id} déconnecté via logout_ajax.")
         except Profil.DoesNotExist:
-            logger.warning(f"Profil avec id {user_id} non trouvé lors du logout_ajax.")
-    
+            pass
+    request.session.flush()
+    return redirect('homes')
+
+
+@csrf_exempt
+def logout_ajax(request):
+    if request.method != 'POST':
+        return JsonResponse({'status': 'method_not_allowed'}, status=405)
+
+    user_id = request.session.get('user_id')
+    if user_id:
+        try:
+            user = Profil.objects.get(id=user_id)
+            user.is_online = False
+            user.derniere_connexion = timezone.now()
+            user.save()
+        except Profil.DoesNotExist:
+            pass
+
     request.session.flush()
     return JsonResponse({'status': 'ok'})
 
