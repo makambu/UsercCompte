@@ -1,6 +1,7 @@
 from django.utils import timezone
 from django.conf import settings
 from django.shortcuts import redirect
+from django.contrib.sessions.exceptions import SessionInterrupted
 from django.contrib import messages
 from app_usercompte.models import Profil
 
@@ -43,18 +44,24 @@ class UpdateLastActivityMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        user_id = request.session.get("user_id")
-        if user_id:
-            try:
-                user = Profil.objects.get(id=user_id)
-                user.derniere_activité = timezone.now()
-                user.is_online = True
-                user.save(update_fields=["derniere_activité", "is_online"])
-            except Profil.DoesNotExist:
-                pass
-            except Exception as e:
-                print("Erreur middleware activité:", e)  # log silencieux
-        return self.get_response(request)
+        response = self.get_response(request)
+
+        # Sécuriser contre une session flushée pendant le traitement
+        try:
+            user_id = request.session.get("user_id")
+            if user_id:
+                try:
+                    user = Profil.objects.get(id=user_id)
+                    user.derniere_activité = timezone.now()
+                    user.is_online = True
+                    user.save(update_fields=["derniere_activité", "is_online"])
+                except Profil.DoesNotExist:
+                    pass
+        except SessionInterrupted:
+            # La session a été supprimée avant la fin de la requête => ignorer
+            pass
+
+        return response
 
         
 
