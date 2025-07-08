@@ -5,6 +5,7 @@ from . import views
 
 urlpatterns = [
     path('', views.splash_view, name='splash'),  # Page d’accueil temporaire
+    path('session-expired/', views.session_expired, name='session_expired'),
     path('homes/', views.homes, name='homes'),  # ta page d’accueil normale
     path('login_user/', views.login_user, name='login_user'),
     path('logout/', views.logout_user, name='logout'),

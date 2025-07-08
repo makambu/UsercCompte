@@ -41,13 +41,21 @@ def splash_view(request):
     if user_id:
         utilisateur = Profil.objects.filter(id=user_id).first()
         if utilisateur:
-            return redirect('homes')  # ou autre vue principale
+            return redirect('homes')
         else:
-            # Supprime la session invalide
-            request.session.flush()
-            messages.error(request, "Votre compte a été supprimé. Veuillez vous reconnecter.")
-            return redirect('login_user')
+            # On redirige vers une vue qui fait le flush, pas ici directement
+            request.session['expired'] = True
+            return redirect('session_expired')
+
     return render(request, 'includ/splash.html')
+
+
+
+def session_expired(request):
+    request.session.flush()
+    messages.warning(request, "Votre session a expiré pour cause d'inactivité.")
+    return redirect('splash')  # ou vers splash si tu veux splash d'abord
+
 
 
 def homes(request):
@@ -91,7 +99,7 @@ def homes(request):
     try:
         utilisateur_connecte = Profil.objects.get(id=user_id)
     except Profil.DoesNotExist:
-        request.session.flush()
+        #request.session.flush()
         messages.warning(request, "Session expirée ou utilisateur introuvable.")
         return redirect('splash')  # ou 'login_user'
 
@@ -99,13 +107,16 @@ def homes(request):
 
     # Vérifier l'inactivité prolongée (> 50 minutes)
     if utilisateur_connecte.derniere_activité and utilisateur_connecte.derniere_activité < now - timedelta(minutes=50):
+        # Marque utilisateur offline sans flush immédiat
         utilisateur_connecte.is_online = False
         utilisateur_connecte.save(update_fields=['is_online'])
-        request.session.flush()
-        messages.warning(request, "Session expirée pour inactivité.")
-        return redirect('splash')
 
-    # ✅ Ne pas redondamment modifier is_online ici — c’est le rôle du middleware
+        # Ajoute un flag pour déconnexion douce
+        request.session['expired'] = True
+
+        return redirect('session_expired')
+
+    # Ne pas redondamment modifier is_online ici — c’est le rôle du middleware
     utilisateur_connecte.derniere_activité = now
     utilisateur_connecte.save(update_fields=["derniere_activité"])
 
@@ -171,7 +182,13 @@ def login_user(request):
             messages.error(request, "Compte invalide")
 
     utilisateurs = Profil.objects.filter(status=1)
-    return render(request, 'base.html', {'utilisateurs': utilisateurs, 'login_required': True})
+    #return render(request, 'base.html', {'utilisateurs': utilisateurs, 'login_required': True})
+    return render(request, 'base.html', {
+        'utilisateurs': utilisateurs,
+        'login_required': True,
+        'register_required': False,
+        'reset_required': False,
+    })
 
 
 def logout_user(request):

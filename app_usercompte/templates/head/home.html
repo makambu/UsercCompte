@@ -103,12 +103,11 @@
 <body>
   
 
-  {% if utilisateur_connecte %}
-  <div id="page-content" class="d-flex flex-column min-vh-100">
+  {% if login_required or register_required %}
+  <div id="page-content" class="blur-content d-flex flex-column min-vh-100">
     {% else %}
-    <div id="page-content" class="blur-content d-flex flex-column min-vh-100">
-      {% endif %}
-
+    <div id="page-content" class="d-flex flex-column min-vh-100">
+    {% endif %}
 
     {% include 'includ/navbar.html' %}
 
