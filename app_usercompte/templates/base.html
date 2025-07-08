@@ -387,13 +387,11 @@
 
             <div class="d-flex justify-content-between align-items-center mt-auto pt-3">
               <div class="d-flex align-items-center">
-                {% if user.derniere_connexion %}
-                {% if user.is_online %}
+                {% if user.is_online and user.derniere_activité|date:"U"|add:"0"|floatformat:"0" > now|add:"-300"|floatformat:"0" %}
                 <span class="blink me-1"></span>
                 <small class="text-success fw-bold">En ligne</small>
                 {% else %}
                 <small class="text-muted">Hors ligne</small>
-                {% endif %}
                 {% endif %}
               </div>
               <a href="{% url 'voir_profil' user.id %}" class="btn custom-shadow-btn pulsating-btn animated-fade-in">

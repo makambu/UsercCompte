@@ -52,9 +52,18 @@ def splash_view(request):
 
 
 def session_expired(request):
+    user_id = request.session.get("user_id")
+    if user_id:
+        try:
+            profil = Profil.objects.get(id=user_id)
+            profil.is_online = False
+            profil.save(update_fields=["is_online"])
+        except Profil.DoesNotExist:
+            pass
+
     request.session.flush()
     messages.warning(request, "Votre session a expiré pour cause d'inactivité.")
-    return redirect('splash')  # ou vers splash si tu veux splash d'abord
+    return redirect('splash')
 
 
 
